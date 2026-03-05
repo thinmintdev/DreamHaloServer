@@ -422,19 +422,34 @@ function Set-PerplexicaConfig {
     $baseUrl = "http://localhost:$PerplexicaPort"
 
     # Helper: POST a key/value pair to the config API
+    # Uses HttpWebRequest instead of Invoke-WebRequest to avoid PS 5.1
+    # credential dialog on non-200 responses.
     function Post-ConfigValue {
         param([string]$Key, $Value)
         $body = @{ key = $Key; value = $Value } | ConvertTo-Json -Depth 10 -Compress
         $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
-        Invoke-WebRequest -Uri "$baseUrl/api/config" -Method POST `
-            -ContentType "application/json" -Body $utf8Bytes `
-            -UseBasicParsing -ErrorAction Stop | Out-Null
+        $req = [System.Net.HttpWebRequest]::Create("$baseUrl/api/config")
+        $req.Method = "POST"
+        $req.ContentType = "application/json"
+        $req.Timeout = 5000
+        $stream = $req.GetRequestStream()
+        $stream.Write($utf8Bytes, 0, $utf8Bytes.Length)
+        $stream.Close()
+        $resp = $req.GetResponse()
+        $resp.Close()
     }
 
     try {
-        $resp = Invoke-WebRequest -Uri "$baseUrl/api/config" `
-            -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-        $config = ($resp.Content | ConvertFrom-Json).values
+        # GET current config using HttpWebRequest (avoids PS 5.1 credential dialog)
+        $req = [System.Net.HttpWebRequest]::Create("$baseUrl/api/config")
+        $req.Method = "GET"
+        $req.Timeout = 5000
+        $httpResp = $req.GetResponse()
+        $reader = New-Object System.IO.StreamReader($httpResp.GetResponseStream())
+        $respBody = $reader.ReadToEnd()
+        $reader.Close()
+        $httpResp.Close()
+        $config = ($respBody | ConvertFrom-Json).values
 
         # Already configured -- skip
         if ($config.setupComplete) { return $true }

@@ -449,9 +449,13 @@ if ($DryRun) {
                 Start-Sleep -Seconds 2
                 $waited += 2
                 try {
-                    $resp = Invoke-WebRequest -Uri "http://localhost:8080/health" `
-                        -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue
-                    if ($resp.StatusCode -eq 200) {
+                    $req = [System.Net.HttpWebRequest]::Create("http://localhost:8080/health")
+                    $req.Timeout = 3000
+                    $req.Method = "GET"
+                    $resp = $req.GetResponse()
+                    $code = [int]$resp.StatusCode
+                    $resp.Close()
+                    if ($code -eq 200) {
                         $healthy = $true
                         break
                     }
@@ -572,9 +576,16 @@ if ($DryRun) {
         # ── Start Docker services ──
         Write-Chapter "STARTING SERVICES"
         Write-AI "Running: docker compose $($composeFlags -join ' ') up -d"
+        # NOTE: docker compose sends pull progress to stderr. PowerShell 5.1
+        # treats ANY stderr output as NativeCommandError, corrupting $LASTEXITCODE.
+        # Temporarily silence stderr-as-error so $LASTEXITCODE reflects the real exit code.
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
         & docker compose @composeFlags up -d 2>&1 | ForEach-Object { Write-Host "  $_" }
-        if ($LASTEXITCODE -ne 0) {
-            Write-AIError "docker compose up failed (exit code: $LASTEXITCODE)"
+        $composeExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEAP
+        if ($composeExit -ne 0) {
+            Write-AIError "docker compose up failed (exit code: $composeExit)"
             exit 1
         }
         Write-AISuccess "Docker services started"
@@ -658,33 +669,15 @@ if ($DryRun) {
                     Write-AISuccess "OpenCode config already exists -- skipping"
                 }
 
-                # Read OPENCODE_SERVER_PASSWORD from .env (generated earlier in Step 4)
-                $ocPassword = ""
-                $envPath = Join-Path $InstallDir ".env"
-                if (Test-Path $envPath) {
-                    $envLines = [System.IO.File]::ReadAllLines($envPath)
-                    foreach ($line in $envLines) {
-                        if ($line -match "^OPENCODE_SERVER_PASSWORD=(.*)") {
-                            $ocPassword = $Matches[1]
-                            break
-                        }
-                    }
-                }
-
                 # Create VBS launcher for hidden startup (no console window)
+                # Binds to 127.0.0.1 (localhost only) -- no auth needed for local access
                 # NOTE: WshShell.Run expands %USERPROFILE% natively, no ExpandEnvironmentStrings needed
                 $vbsContent = @"
 ' Dream Server -- OpenCode Web Server (hidden startup)
 ' Launches opencode.exe in web mode without a visible console window
 Set WshShell = CreateObject("WScript.Shell")
 WshShell.CurrentDirectory = WshShell.ExpandEnvironmentStrings("%USERPROFILE%\.opencode")
-"@
-                if ($ocPassword) {
-                    $vbsContent += "`r`nWshShell.Environment(""Process"")(""OPENCODE_SERVER_PASSWORD"") = ""$ocPassword"""
-                }
-                $vbsContent += @"
-
-WshShell.Run """%USERPROFILE%\.opencode\bin\opencode.exe"" web --port $($script:OPENCODE_PORT) --hostname 0.0.0.0", 0, False
+WshShell.Run """%USERPROFILE%\.opencode\bin\opencode.exe"" web --port $($script:OPENCODE_PORT) --hostname 127.0.0.1", 0, False
 "@
                 $vbsPath = Join-Path $script:OPENCODE_DIR "start-opencode.vbs"
                 Write-Utf8NoBom -Path $vbsPath -Content $vbsContent
@@ -702,13 +695,11 @@ WshShell.Run """%USERPROFILE%\.opencode\bin\opencode.exe"" web --port $($script:
                     Start-Sleep -Seconds 1
                 }
 
-                # Start OpenCode now (set password env var before launch)
+                # Start OpenCode now (localhost-only, no password)
                 Write-AI "Starting OpenCode web server on port $($script:OPENCODE_PORT)..."
-                if ($ocPassword) { $env:OPENCODE_SERVER_PASSWORD = $ocPassword }
                 $ocProc = Start-Process -FilePath $script:OPENCODE_EXE `
-                    -ArgumentList "web --port $($script:OPENCODE_PORT) --hostname 0.0.0.0" `
+                    -ArgumentList "web --port $($script:OPENCODE_PORT) --hostname 127.0.0.1" `
                     -WindowStyle Hidden -PassThru
-                if ($ocPassword) { Remove-Item Env:\OPENCODE_SERVER_PASSWORD -ErrorAction SilentlyContinue }
                 Write-AISuccess "OpenCode started (PID $($ocProc.Id))"
             }
         }
@@ -732,8 +723,10 @@ if ($DryRun) {
 }
 
 # Health check loop
+# NOTE: NVIDIA maps llama-server to host port 11434; AMD runs natively on 8080
+$llamaHealthPort = $(if ($gpuInfo.Backend -eq "amd") { "8080" } else { "11434" })
 $healthChecks = @(
-    @{ Name = "LLM (llama-server)"; Url = "http://localhost:8080/health" }
+    @{ Name = "LLM (llama-server)"; Url = "http://localhost:${llamaHealthPort}/health" }
     @{ Name = "Chat UI (Open WebUI)"; Url = "http://localhost:3000" }
 )
 
@@ -756,11 +749,26 @@ foreach ($check in $healthChecks) {
     $healthy = $false
     for ($i = 1; $i -le $maxAttempts; $i++) {
         try {
-            $resp = Invoke-WebRequest -Uri $check.Url -TimeoutSec 3 `
-                -UseBasicParsing -ErrorAction SilentlyContinue
-            if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 400) {
+            # Use HttpWebRequest directly to avoid PS 5.1 credential dialog on 401
+            $req = [System.Net.HttpWebRequest]::Create($check.Url)
+            $req.Timeout = 3000
+            $req.Method = "GET"
+            $resp = $req.GetResponse()
+            $code = [int]$resp.StatusCode
+            $resp.Close()
+            if ($code -ge 200 -and $code -lt 400) {
                 $healthy = $true
                 break
+            }
+        } catch [System.Net.WebException] {
+            # 401/403 means the service IS responding (auth-protected) -- treat as healthy
+            $webResp = $_.Exception.Response
+            if ($webResp) {
+                $code = [int]$webResp.StatusCode
+                if ($code -eq 401 -or $code -eq 403) {
+                    $healthy = $true
+                    break
+                }
             }
         } catch { }
         if ($i -le 3 -or $i % 5 -eq 0) {
