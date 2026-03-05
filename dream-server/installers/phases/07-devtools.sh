@@ -6,6 +6,7 @@
 # Purpose: Install Claude Code, Codex CLI, and OpenCode
 #
 # Expects: DRY_RUN, INSTALL_DIR, LOG_FILE, LLM_MODEL, MAX_CONTEXT,
+#           PKG_MANAGER,
 #           ai(), ai_ok(), ai_warn(), log()
 # Provides: (developer tools installed globally)
 #
@@ -21,11 +22,27 @@ else
 
     # Ensure Node.js/npm is available (needed for Claude Code and Codex)
     if ! command -v npm &> /dev/null; then
-        if command -v apt-get &> /dev/null; then
-            ai "Installing Node.js..."
-            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >> "$LOG_FILE" 2>&1 || true
-            sudo apt-get install -y nodejs >> "$LOG_FILE" 2>&1 || true
-        fi
+        ai "Installing Node.js..."
+        case "$PKG_MANAGER" in
+            apt)
+                curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >> "$LOG_FILE" 2>&1 || true
+                sudo apt-get install -y nodejs >> "$LOG_FILE" 2>&1 || true
+                ;;
+            dnf)
+                sudo dnf module install -y nodejs:22 >> "$LOG_FILE" 2>&1 || \
+                    sudo dnf install -y nodejs >> "$LOG_FILE" 2>&1 || true
+                ;;
+            pacman)
+                sudo pacman -S --noconfirm --needed nodejs npm >> "$LOG_FILE" 2>&1 || true
+                ;;
+            zypper)
+                sudo zypper --non-interactive install nodejs22 >> "$LOG_FILE" 2>&1 || \
+                    sudo zypper --non-interactive install nodejs >> "$LOG_FILE" 2>&1 || true
+                ;;
+            *)
+                ai_warn "Unknown package manager — cannot install Node.js automatically"
+                ;;
+        esac
     fi
 
     if command -v npm &> /dev/null; then

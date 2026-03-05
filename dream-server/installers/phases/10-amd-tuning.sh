@@ -5,7 +5,7 @@
 # Part of: installers/phases/
 # Purpose: AMD APU (Strix Halo) sysctl, modprobe, GRUB, and tuned setup
 #
-# Expects: GPU_BACKEND, DRY_RUN, INSTALL_DIR, LOG_FILE,
+# Expects: GPU_BACKEND, DRY_RUN, INSTALL_DIR, LOG_FILE, PKG_MANAGER,
 #           ai(), ai_ok(), ai_warn(), log()
 # Provides: System tuning applied (sysctl, modprobe, timers, tuned)
 #
@@ -121,7 +121,13 @@ elif [[ "$GPU_BACKEND" == "amd" ]] && ! $DRY_RUN; then
         fi
     else
         ai_warn "tuned not installed. For 5-8% prompt processing improvement:"
-        ai "  sudo apt install tuned && sudo systemctl enable --now tuned && sudo tuned-adm profile accelerator-performance"
+        _inst_cmd="sudo apt install"
+        case "$PKG_MANAGER" in
+            dnf)    _inst_cmd="sudo dnf install" ;;
+            pacman) _inst_cmd="sudo pacman -S" ;;
+            zypper) _inst_cmd="sudo zypper install" ;;
+        esac
+        ai "  $_inst_cmd tuned && sudo systemctl enable --now tuned && sudo tuned-adm profile accelerator-performance"
     fi
 
     # LiteLLM config already copied by rsync/cp block above

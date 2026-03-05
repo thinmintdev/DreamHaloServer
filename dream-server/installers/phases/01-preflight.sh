@@ -6,6 +6,7 @@
 # Purpose: Root/OS/tools checks, existing installation check
 #
 # Expects: SCRIPT_DIR, INSTALL_DIR, LOG_FILE, INTERACTIVE, DRY_RUN, FORCE,
+#           PKG_MANAGER,
 #           show_phase(), ai(), ai_ok(), signal(), log(), warn(), error()
 # Provides: OS sourced from /etc/os-release, OPTIONAL_TOOLS_MISSING
 #
@@ -31,7 +32,12 @@ log "Detected OS: $PRETTY_NAME"
 
 # Check for required tools
 if ! command -v curl &> /dev/null; then
-    error "curl is required but not installed. Install with: sudo apt install curl"
+    case "$PKG_MANAGER" in
+        dnf)    error "curl is required but not installed. Install with: sudo dnf install curl" ;;
+        pacman) error "curl is required but not installed. Install with: sudo pacman -S curl" ;;
+        zypper) error "curl is required but not installed. Install with: sudo zypper install curl" ;;
+        *)      error "curl is required but not installed. Install with: sudo apt install curl" ;;
+    esac
 fi
 log "curl: $(curl --version | head -1)"
 
@@ -46,7 +52,12 @@ fi
 if [[ -n "$OPTIONAL_TOOLS_MISSING" ]]; then
     warn "Optional tools missing:$OPTIONAL_TOOLS_MISSING"
     echo "  These are needed for update/backup scripts. Install with:"
-    echo "  sudo apt install$OPTIONAL_TOOLS_MISSING"
+    case "$PKG_MANAGER" in
+        dnf)    echo "  sudo dnf install$OPTIONAL_TOOLS_MISSING" ;;
+        pacman) echo "  sudo pacman -S$OPTIONAL_TOOLS_MISSING" ;;
+        zypper) echo "  sudo zypper install$OPTIONAL_TOOLS_MISSING" ;;
+        *)      echo "  sudo apt install$OPTIONAL_TOOLS_MISSING" ;;
+    esac
 fi
 
 # Check source files exist

@@ -50,6 +50,7 @@ source "$SCRIPT_DIR/installers/lib/ui.sh"
 source "$SCRIPT_DIR/installers/lib/detection.sh"
 source "$SCRIPT_DIR/installers/lib/tier-map.sh"
 source "$SCRIPT_DIR/installers/lib/compose-select.sh"
+source "$SCRIPT_DIR/installers/lib/packaging.sh"
 
 #=============================================================================
 # Command Line Args
@@ -126,6 +127,10 @@ while [[ $# -gt 0 ]]; do
         *) error "Unknown option: $1" ;;
     esac
 done
+
+# Detect distro + package manager (after arg parsing so --help still shows
+# the correct VERSION before /etc/os-release overwrites it)
+detect_pkg_manager
 
 #=============================================================================
 # Splash
