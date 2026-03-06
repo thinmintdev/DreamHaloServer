@@ -239,7 +239,7 @@ cmd_status() {
         local name="${ep_names[$i]}"
         local url="${ep_urls[$i]}"
         local code
-        code=$(curl -sf -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+        code=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
         if [[ "$code" -ge 200 ]] && [[ "$code" -lt 400 ]]; then
             ai_ok "${name}: healthy"
         elif [[ "$code" == "401" ]] || [[ "$code" == "403" ]]; then

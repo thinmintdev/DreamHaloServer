@@ -763,7 +763,7 @@ for ((idx=0; idx<${#HEALTH_NAMES[@]}; idx++)); do
     HEALTHY=false
 
     for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
-        HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "$URL" 2>/dev/null || echo "000")
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" 2>/dev/null || echo "000")
         if [[ "$HTTP_CODE" -ge 200 ]] && [[ "$HTTP_CODE" -lt 400 ]]; then
             HEALTHY=true
             break
