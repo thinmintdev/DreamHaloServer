@@ -192,10 +192,12 @@ def evaluate(intent: str, tool_name: str, args: dict, policy: dict) -> tuple[boo
         path = str(args.get("path", args.get("file", args.get("filename", ""))))
         if not path:
             return True, "no path specified"
+        import posixpath
+        normalized = posixpath.normpath(path)
         allowed_paths = intent_policy.get("allowed_paths", [])
-        if any(path.startswith(p) for p in allowed_paths):
+        if any(normalized.startswith(p) for p in allowed_paths):
             return True, f"path is within allowed zone"
-        return False, f"write to '{path}' is outside allowed paths"
+        return False, f"write to '{normalized}' is outside allowed paths"
 
     return True, f"unknown mode '{mode}', defaulting to allow"
 
