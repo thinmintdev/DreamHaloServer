@@ -41,26 +41,6 @@ _env_set() {
     fi
 }
 
-# B6 fix: Safe .env loading (prevents shell injection)
-load_env() {
-    [[ -f "$INSTALL_DIR/.env" ]] || return 0
-    set -a
-    while IFS='=' read -r key value; do
-        # Skip comments and empty lines
-        [[ "$key" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "$key" ]] && continue
-        # Only allow alphanumeric + underscore in key names
-        [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
-        # Strip quotes from value
-        value="${value%\"}"
-        value="${value#\"}"
-        value="${value%\'}"
-        value="${value#\'}"
-        export "$key=$value"
-    done < "$INSTALL_DIR/.env"
-    set +a
-}
-
 check_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then
         error "Dream Server not found at $INSTALL_DIR. Set DREAM_HOME or run installer first."
@@ -72,6 +52,12 @@ check_install() {
         fi
     fi
 }
+
+#=============================================================================
+# Safe .env loading (no eval; use lib/safe-env.sh)
+#=============================================================================
+[[ -f "$SCRIPT_DIR/lib/safe-env.sh" ]] && . "$SCRIPT_DIR/lib/safe-env.sh"
+load_env() { load_env_file "${INSTALL_DIR}/.env"; }
 
 #=============================================================================
 # Service Registry
