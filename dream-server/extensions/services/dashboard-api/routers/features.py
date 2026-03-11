@@ -1,14 +1,17 @@
 """Feature discovery endpoints."""
 
+import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-import os
 from config import FEATURES, GPU_BACKEND, SERVICES
 from gpu import get_gpu_info, get_gpu_tier
 from models import GPUInfo
 from security import verify_api_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["features"])
 
@@ -131,6 +134,11 @@ async def api_features(api_key: str = Depends(verify_api_key)):
             gpu_vram_gb = float(os.environ.get("HOST_RAM_GB", "0") or "0")
         except (ValueError, TypeError):
             pass
+        if gpu_vram_gb == 0:
+            logger.warning(
+                "Apple Silicon VRAM fallback: HOST_RAM_GB is 0 or unset; "
+                "all features will show insufficient_vram"
+            )
         memory_type = "unified"
 
     tier_recommendations = []

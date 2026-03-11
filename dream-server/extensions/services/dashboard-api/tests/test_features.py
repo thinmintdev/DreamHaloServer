@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 
 class TestCalculateFeatureStatusAppleFallback:
@@ -54,3 +54,21 @@ class TestCalculateFeatureStatusAppleFallback:
                 result = calculate_feature_status(feature, [], None)
         # gpu_info is None, so gpu_vram_gb=0, which is < 8 → insufficient_vram on nvidia
         assert result["status"] == "insufficient_vram"
+
+
+class TestApiFeaturesAppleFallback:
+    """Tests for the endpoint-level Apple Silicon VRAM fallback in api_features()."""
+
+    def test_api_features_apple_fallback_gpu_summary(self, test_client):
+        """api_features() endpoint applies Apple Silicon HOST_RAM_GB fallback for GPU summary."""
+        with patch.dict(os.environ, {"HOST_RAM_GB": "16", "GPU_BACKEND": "apple"}):
+            with patch("routers.features.GPU_BACKEND", "apple"):
+                with patch("routers.features.get_gpu_info", return_value=None):
+                    with patch("helpers.get_all_services", new_callable=AsyncMock, return_value=[]):
+                        response = test_client.get(
+                            "/api/features",
+                            headers=test_client.auth_headers,
+                        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["gpu"]["vramGb"] == 16.0
