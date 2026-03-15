@@ -80,6 +80,8 @@ pkg_update() {
         dnf)    sudo dnf check-update -q 2>>"$LOG_FILE" || true ;;  # returns 100 if updates available
         pacman) sudo pacman -Syu --noconfirm 2>>"$LOG_FILE" ;;      # full sync+upgrade (partial -Sy is unsafe)
         zypper) sudo zypper --non-interactive refresh 2>>"$LOG_FILE" ;;
+        xbps)   sudo xbps-install -S 2>>"$LOG_FILE" ;;
+        apk)    sudo apk update 2>>"$LOG_FILE" ;;
         *)      warn "Cannot update package index: unknown package manager '$PKG_MANAGER'" ;;
     esac
 }
@@ -96,6 +98,8 @@ pkg_install() {
         dnf)    sudo dnf install -y -q "${pkgs[@]}" 2>>"$LOG_FILE" ;;
         pacman) sudo pacman -S --noconfirm --needed "${pkgs[@]}" 2>>"$LOG_FILE" ;;
         zypper) sudo zypper --non-interactive install "${pkgs[@]}" 2>>"$LOG_FILE" ;;
+        xbps)   sudo xbps-install -y "${pkgs[@]}" 2>>"$LOG_FILE" ;;
+        apk)    sudo apk add --no-progress "${pkgs[@]}" 2>>"$LOG_FILE" ;;
         *)      warn "Cannot install packages: unknown package manager '$PKG_MANAGER'. Install manually: ${pkgs[*]}" ; return 1 ;;
     esac
 }
@@ -109,6 +113,8 @@ pkg_available() {
         dnf)    dnf info "$pkg" &>/dev/null ;;
         pacman) pacman -Si "$pkg" &>/dev/null ;;
         zypper) zypper info "$pkg" &>/dev/null ;;
+        xbps)   xbps-query -Rs "$pkg" &>/dev/null ;;
+        apk)    apk info -e "$pkg" &>/dev/null || apk search -q "$pkg" &>/dev/null ;;
         *)      return 1 ;;
     esac
 }
@@ -142,6 +148,20 @@ pkg_resolve() {
             case "$canonical" in
                 docker-compose-plugin) echo "docker-compose" ;;
                 build-essential)       echo "devel_basis" ;;
+                *) echo "$canonical" ;;
+            esac
+            ;;
+        xbps)
+            case "$canonical" in
+                docker-compose-plugin) echo "docker-compose" ;;
+                build-essential)       echo "base-devel" ;;
+                *) echo "$canonical" ;;
+            esac
+            ;;
+        apk)
+            case "$canonical" in
+                docker-compose-plugin) echo "docker-cli-compose" ;;
+                build-essential)       echo "build-base" ;;
                 *) echo "$canonical" ;;
             esac
             ;;
