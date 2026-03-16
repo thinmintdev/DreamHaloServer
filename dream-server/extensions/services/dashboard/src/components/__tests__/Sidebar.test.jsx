@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import { render } from '../../test/test-utils'
-import Sidebar from '../Sidebar'
+import Sidebar from '../Sidebar' // eslint-disable-line no-unused-vars
 
 vi.mock('../../plugins/registry', () => ({
   getSidebarNavItems: vi.fn(() => [

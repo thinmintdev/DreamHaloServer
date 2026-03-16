@@ -45,9 +45,7 @@ describe('useModels', () => {
   })
 
   test('downloadModel calls POST and refreshes', async () => {
-    let callCount = 0
     fetch.mockImplementation((url, opts) => {
-      callCount++
       if (opts?.method === 'POST') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
       }

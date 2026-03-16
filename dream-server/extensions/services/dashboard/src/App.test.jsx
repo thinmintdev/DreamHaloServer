@@ -1,6 +1,6 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { render } from './test/test-utils'
-import App from './App'
+import App from './App' // eslint-disable-line no-unused-vars
 
 vi.mock('./hooks/useSystemStatus', () => ({
   useSystemStatus: vi.fn(() => ({
