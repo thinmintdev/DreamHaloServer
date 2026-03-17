@@ -87,6 +87,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+usage() {
+    cat <<'EOF'
+Usage: detect-hardware.sh [--json] [--json-compact] [--verbose] [--help]
+
+Options:
+  --json          Print machine-readable JSON output
+  --json-compact  Print JSON in one line (for scripting)
+  --verbose       Include extra hardware identifiers in text mode
+  --help          Show this help
+EOF
+}
+
 # Detect OS and environment
 detect_os() {
     # Explicit WSL detection first
@@ -386,12 +398,20 @@ tier_model() {
 # Main detection
 main() {
     local json_output=false
+    local compact_json=false
     local verbose=false
 
     for arg in "$@"; do
         case "$arg" in
             --json) json_output=true ;;
+            --json-compact) json_output=true; compact_json=true ;;
             --verbose) verbose=true ;;
+            --help|-h) usage; return 0 ;;
+            *)
+                err "Unknown argument: $arg"
+                usage
+                return 2
+                ;;
         esac
     done
 
@@ -508,7 +528,8 @@ main() {
         esc_os=$(json_escape "$os")
         esc_cpu=$(json_escape "$cpu")
         esc_gpu=$(json_escape "$gpu_name")
-        cat <<EOF
+        local payload
+        payload=$(cat <<EOF
 {
   "os": "$esc_os",
   "platform": "$(json_escape "$platform")",
@@ -537,6 +558,12 @@ main() {
   "recommended_model": "$(json_escape "$recommended_model")"
 }
 EOF
+)
+        if $compact_json; then
+            printf '%s\n' "$(printf '%s' "$payload" | tr -d '\n')"
+        else
+            printf '%s\n' "$payload"
+        fi
     else
         echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
         echo -e "${BLUE}║      Dream Server Hardware Detection     ║${NC}"
