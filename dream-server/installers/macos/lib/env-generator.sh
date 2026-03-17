@@ -62,6 +62,33 @@ generate_dream_env() {
     opencode_password=$(new_secure_base64 16)
     local searxng_secret
     searxng_secret=$(new_secure_hex 32)
+    # Langfuse (LLM Observability)
+    # NOTE: macOS env-generator always regenerates secrets (no merge logic).
+    # If reinstalling with existing Langfuse data, run: rm -rf data/langfuse/
+    local langfuse_nextauth_secret
+    langfuse_nextauth_secret=$(new_secure_hex 32)
+    local langfuse_salt
+    langfuse_salt=$(new_secure_hex 32)
+    local langfuse_encryption_key
+    langfuse_encryption_key=$(new_secure_hex 32)
+    local langfuse_db_password
+    langfuse_db_password=$(new_secure_hex 16)
+    local langfuse_clickhouse_password
+    langfuse_clickhouse_password=$(new_secure_hex 16)
+    local langfuse_redis_password
+    langfuse_redis_password=$(new_secure_hex 16)
+    local langfuse_minio_access_key
+    langfuse_minio_access_key=$(new_secure_hex 16)
+    local langfuse_minio_secret_key
+    langfuse_minio_secret_key=$(new_secure_hex 32)
+    local langfuse_project_public_key
+    langfuse_project_public_key="pk-lf-dream-$(new_secure_hex 16)"
+    local langfuse_project_secret_key
+    langfuse_project_secret_key="sk-lf-dream-$(new_secure_hex 16)"
+    local langfuse_init_project_id
+    langfuse_init_project_id=$(new_secure_hex 16)
+    local langfuse_init_user_password
+    langfuse_init_user_password=$(new_secure_hex 16)
     # macOS: llama-server runs natively, containers reach it via host.docker.internal
     local llm_api_url="http://host.docker.internal:8080"
 
@@ -104,6 +131,7 @@ QDRANT_GRPC_PORT=6334
 LITELLM_PORT=4000
 OPENCLAW_PORT=7860
 SEARXNG_PORT=8888
+LANGFUSE_PORT=3006
 
 #=== Security (auto-generated, keep secret!) ===
 WEBUI_SECRET=${webui_secret}
@@ -134,6 +162,22 @@ N8N_AUTH=true
 N8N_HOST=localhost
 N8N_WEBHOOK_URL=http://localhost:5678
 TIMEZONE=${tz}
+
+#=== Langfuse (LLM Observability) ===
+LANGFUSE_ENABLED=false
+LANGFUSE_NEXTAUTH_SECRET=${langfuse_nextauth_secret}
+LANGFUSE_SALT=${langfuse_salt}
+LANGFUSE_ENCRYPTION_KEY=${langfuse_encryption_key}
+LANGFUSE_DB_PASSWORD=${langfuse_db_password}
+LANGFUSE_CLICKHOUSE_PASSWORD=${langfuse_clickhouse_password}
+LANGFUSE_REDIS_PASSWORD=${langfuse_redis_password}
+LANGFUSE_MINIO_ACCESS_KEY=${langfuse_minio_access_key}
+LANGFUSE_MINIO_SECRET_KEY=${langfuse_minio_secret_key}
+LANGFUSE_PROJECT_PUBLIC_KEY=${langfuse_project_public_key}
+LANGFUSE_PROJECT_SECRET_KEY=${langfuse_project_secret_key}
+LANGFUSE_INIT_PROJECT_ID=${langfuse_init_project_id}
+LANGFUSE_INIT_USER_EMAIL=admin@dreamserver.local
+LANGFUSE_INIT_USER_PASSWORD=${langfuse_init_user_password}
 ENVEOF
 
     # Restrict .env to current user only (chmod 600)
