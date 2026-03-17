@@ -75,11 +75,16 @@ def init_db():
         "filter_tools_removed": "INTEGER DEFAULT 0",
     }
 
+    import re
+    # Regex to validate SQL identifiers: alphanumeric + underscore only
+    SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
     for col, typedef in ALLOWED_COLUMNS.items():
         try:
-            # Validate column name and type against allowlist before executing
-            if col not in ALLOWED_COLUMNS or typedef != ALLOWED_COLUMNS[col]:
-                raise ValueError(f"Invalid column definition: {col} {typedef}")
+            # Defense in depth: validate column name is a safe SQL identifier
+            # even though col comes from a hardcoded dict (protects against future refactoring)
+            if not SAFE_IDENTIFIER.match(col):
+                raise ValueError(f"Invalid column name: {col}")
             conn.execute(f"ALTER TABLE usage ADD COLUMN {col} {typedef}")
             conn.commit()
         except sqlite3.OperationalError as e:
