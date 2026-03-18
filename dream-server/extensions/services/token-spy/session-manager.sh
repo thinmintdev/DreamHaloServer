@@ -174,7 +174,8 @@ manage_remote_agent() {
   log "Checking $agent (remote: $host, local model, \$0.00/turn)"
 
   local remote_info
-  remote_info=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "${host}" bash 2>/dev/null << REMOTESCRIPT
+  # Unquoted heredoc: ${remote_dir} must expand locally before remote execution
+  remote_info=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "${host}" bash << REMOTESCRIPT
     SESSIONS_DIR="${remote_dir}"
     if [ ! -d "\$SESSIONS_DIR" ]; then
       echo "NO_DIR"
