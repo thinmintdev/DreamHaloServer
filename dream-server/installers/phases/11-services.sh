@@ -271,7 +271,7 @@ MODELS_INI_EOF
     compose_ok=false
     # Force-rebuild locally-built images so re-installs never serve stale code
     $DOCKER_COMPOSE_CMD "${COMPOSE_FLAGS_ARR[@]}" build --no-cache dashboard-api dashboard >> "$LOG_FILE" 2>&1 || true
-    $DOCKER_COMPOSE_CMD "${COMPOSE_FLAGS_ARR[@]}" up --build -d >> "$LOG_FILE" 2>&1 &
+    $DOCKER_COMPOSE_CMD "${COMPOSE_FLAGS_ARR[@]}" up -d >> "$LOG_FILE" 2>&1 &
     compose_pid=$!
     if spin_task $compose_pid "Launching containers..."; then
         compose_ok=true
@@ -279,7 +279,7 @@ MODELS_INI_EOF
         printf "\r  ${AMB}⚠${NC} %-60s\n" "Some services still starting..."
         echo ""
         ai_warn "Some containers need more time. Retrying..."
-        $DOCKER_COMPOSE_CMD "${COMPOSE_FLAGS_ARR[@]}" up --build -d >> "$LOG_FILE" 2>&1 &
+        $DOCKER_COMPOSE_CMD "${COMPOSE_FLAGS_ARR[@]}" up -d >> "$LOG_FILE" 2>&1 &
         compose_pid=$!
         if spin_task $compose_pid "Waiting for remaining services..."; then
             compose_ok=true
