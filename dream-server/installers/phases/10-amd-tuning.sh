@@ -32,6 +32,29 @@ elif [[ "$GPU_BACKEND" == "amd" ]] && ! $DRY_RUN; then
             ai_warn "Could not add $USER to render/video groups. Run: sudo usermod -aG render,video $USER"
     fi
 
+    # Verify GPU compute devices exist — containers need /dev/kfd and /dev/dri
+    if [[ ! -e /dev/kfd ]]; then
+        ai "ROCm compute device /dev/kfd not found. Loading kernel module..."
+        sudo -n modprobe amdkfd 2>/dev/null || true
+        if [[ -e /dev/kfd ]]; then
+            ai_ok "/dev/kfd loaded successfully"
+        else
+            ai_warn "/dev/kfd still not available after modprobe."
+            ai_warn "GPU containers (llama-server, comfyui) will fail without it."
+            ai_warn "Fix: reboot, or run: sudo modprobe amdkfd"
+        fi
+    fi
+
+    if [[ ! -d /dev/dri ]]; then
+        ai_warn "/dev/dri not found. The amdgpu driver may not be loaded."
+        ai_warn "GPU containers will fail. Try: sudo modprobe amdgpu, or reboot."
+    elif [[ ! -e /dev/dri/renderD128 ]]; then
+        ai_warn "/dev/dri exists but renderD128 is missing. GPU compute may not work."
+        ai_warn "Check: ls -la /dev/dri/ — you need at least card0/card1 and renderD128."
+    else
+        ai_ok "GPU devices verified (/dev/kfd, /dev/dri/renderD128)"
+    fi
+
     # Management scripts and Memory Shepherd already copied by rsync/cp block above
     [[ -d "$INSTALL_DIR/memory-shepherd" ]] && ai_ok "Memory Shepherd installed"
 
