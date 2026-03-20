@@ -201,7 +201,7 @@ pull_with_progress() {
   local count=$3
   local total=$4
   local max_attempts=3
-  local pull_timeout=600  # 10 minutes for large images (CUDA is ~10GB)
+  local pull_timeout=3600  # 60 minutes for large images (CUDA is ~10GB)
   local pull_pid
 
   for attempt in $(seq 1 $max_attempts); do
