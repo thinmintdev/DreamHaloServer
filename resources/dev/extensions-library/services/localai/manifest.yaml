@@ -20,20 +20,50 @@ features:
   - id: text-generation
     name: Text Generation
     description: Generate text with local LLMs via OpenAI-compatible API
-    vram_mb: 4096
+    icon: MessageSquare
+    category: ai
+    requirements:
+      services: [localai]
+      vram_gb: 4
+    priority: 5
+    gpu_backends: [amd, nvidia]
   - id: image-generation
     name: Image Generation
     description: Generate images with local diffusion models
-    vram_mb: 8192
+    icon: Image
+    category: ai
+    requirements:
+      services: [localai]
+      vram_gb: 8
+    priority: 6
+    gpu_backends: [amd, nvidia]
   - id: audio-generation
     name: Audio Generation
     description: Generate audio with local models
-    vram_mb: 4096
+    icon: Music
+    category: ai
+    requirements:
+      services: [localai]
+      vram_gb: 4
+    priority: 7
+    gpu_backends: [amd, nvidia]
   - id: video-generation
     name: Video Generation
     description: Generate video with local models
-    vram_mb: 16384
+    icon: Video
+    category: ai
+    requirements:
+      services: [localai]
+      vram_gb: 16
+    priority: 8
+    gpu_backends: [amd, nvidia]
   - id: voice-cloning
     name: Voice Cloning
     description: Clone voices for TTS with local models
-    vram_mb: 4096
+    icon: Mic
+    category: voice
+    requirements:
+      services: [localai]
+      vram_gb: 4
+    priority: 9
+    gpu_backends: [amd, nvidia]
