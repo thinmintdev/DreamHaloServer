@@ -294,13 +294,18 @@ check_service() {
     local curl_exit=$?
     elapsed=$((elapsed + backoff))
 
-    # Distinguish between timeout (124) and connection refused (7)
+    # Distinguish between timeout (124), connection refused (7),
+    # and transient startup errors (56 = recv error, 52 = empty reply)
     if [[ $curl_exit -eq 124 ]]; then
       # Timeout - service may be overloaded or slow
       printf "\r  ${AMB}⟳${NC} Linking %-20s [%ds] (timeout, retrying) " "$name" "$elapsed"
     elif [[ $curl_exit -eq 7 ]]; then
       # Connection refused - service not started yet
       printf "\r  ${GRN}%s${NC} Linking %-20s [%ds] " "${spin:$i:1}" "$name" "$elapsed"
+    elif [[ $curl_exit -eq 56 || $curl_exit -eq 52 ]]; then
+      # 56 = recv error (service resetting during startup/migrations)
+      # 52 = empty reply (service accepting connections but not ready)
+      printf "\r  ${GRN}%s${NC} Linking %-20s [%ds] (starting up) " "${spin:$i:1}" "$name" "$elapsed"
     else
       # Other error (DNS, network, etc.)
       printf "\r  ${AMB}⟳${NC} Linking %-20s [%ds] (error $curl_exit) " "$name" "$elapsed"
