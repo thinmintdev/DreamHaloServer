@@ -16,7 +16,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 | [`localai/`](services/localai/) | LocalAI — OpenAI-compatible API for local models | AMD, NVIDIA |
 | [`text-generation-webui/`](services/text-generation-webui/) | Oobabooga — full-featured LLM UI with LoRA, GPTQ, quantization | AMD, NVIDIA |
 | [`jan/`](services/jan/) | Jan — local ChatGPT alternative with model management | AMD, NVIDIA |
-| [`librechat/`](services/librechat/) | LibreChat — multi-provider chat UI (local + cloud) | CPU |
+| [`librechat/`](services/librechat/) | LibreChat — multi-provider chat UI (local + cloud) | AMD, NVIDIA, Apple |
 
 ### Voice & Audio
 
@@ -24,7 +24,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 |---------|------------|-----|
 | [`bark/`](services/bark/) | Bark TTS — expressive speech with laughter, emotion, 13 languages | NVIDIA |
 | [`xtts/`](services/xtts/) | Coqui XTTS — voice cloning and multilingual TTS | AMD, NVIDIA |
-| [`piper-audio/`](services/piper-audio/) | Piper — fast, lightweight TTS for edge devices | CPU |
+| [`piper-audio/`](services/piper-audio/) | Piper — fast, lightweight TTS for edge devices | AMD, NVIDIA, Apple |
 | [`rvc/`](services/rvc/) | RVC — real-time voice conversion/cloning | AMD, NVIDIA |
 | [`audiocraft/`](services/audiocraft/) | Meta AudioCraft — text-to-music and sound effects | NVIDIA |
 
@@ -33,7 +33,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 | Service | Description | GPU |
 |---------|------------|-----|
 | [`comfyui/`](services/comfyui/) | ComfyUI — node-based Stable Diffusion workflows | AMD, NVIDIA |
-| [`fooocus/`](services/fooocus/) | Fooocus — simplified Stable Diffusion (Midjourney-like UX) | AMD, NVIDIA |
+| [`fooocus/`](services/fooocus/) | Fooocus — simplified Stable Diffusion (Midjourney-like UX) | NVIDIA |
 | [`invokeai/`](services/invokeai/) | InvokeAI — professional Stable Diffusion with canvas | AMD, NVIDIA |
 | [`forge/`](services/forge/) | Forge / A1111 — Stable Diffusion WebUI with optimizations | NVIDIA |
 
@@ -41,7 +41,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 
 | Service | Description | GPU |
 |---------|------------|-----|
-| [`aider/`](services/aider/) | Aider — AI pair programming in your terminal | CPU |
+| [`aider/`](services/aider/) | Aider — AI pair programming in your terminal | AMD, NVIDIA, Apple |
 | [`continue/`](services/continue/) | Continue — AI coding assistant (VS Code / JetBrains) | AMD, NVIDIA, Apple |
 | [`crewai/`](services/crewai/) | CrewAI — multi-agent orchestration framework | CPU |
 | [`open-interpreter/`](services/open-interpreter/) | Open Interpreter — natural language → system commands | CPU |
@@ -51,7 +51,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 
 | Service | Description | GPU |
 |---------|------------|-----|
-| [`chromadb/`](services/chromadb/) | ChromaDB — lightweight embedding database | CPU |
+| [`chromadb/`](services/chromadb/) | ChromaDB — lightweight embedding database | AMD, NVIDIA, Apple |
 | [`milvus/`](services/milvus/) | Milvus — production-grade vector database | CPU |
 | [`weaviate/`](services/weaviate/) | Weaviate — vector search with hybrid ranking | CPU |
 
@@ -59,8 +59,8 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 
 | Service | Description | GPU |
 |---------|------------|-----|
-| [`flowise/`](services/flowise/) | Flowise — drag-and-drop LLM chain builder | CPU |
-| [`langflow/`](services/langflow/) | Langflow — visual LangChain builder | CPU |
+| [`flowise/`](services/flowise/) | Flowise — drag-and-drop LLM chain builder | AMD, NVIDIA, Apple |
+| [`langflow/`](services/langflow/) | Langflow — visual LangChain builder | AMD, NVIDIA, Apple |
 | [`dify/`](services/dify/) | Dify — LLMOps platform with RAG and agents | AMD, NVIDIA |
 
 ### Self-Hosted Apps
@@ -72,7 +72,7 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 | [`frigate/`](services/frigate/) | Frigate — NVR with real-time AI object detection | NVIDIA |
 | [`gitea/`](services/gitea/) | Gitea — lightweight self-hosted Git | CPU |
 | [`baserow/`](services/baserow/) | Baserow — open-source Airtable alternative | CPU |
-| [`sillytavern/`](services/sillytavern/) | SillyTavern — advanced roleplay/chat frontend | CPU |
+| [`sillytavern/`](services/sillytavern/) | SillyTavern — advanced roleplay/chat frontend | AMD, NVIDIA, Apple |
 
 ### Data & ML
 
@@ -81,6 +81,48 @@ Each extension is a self-contained directory with a `manifest.yaml` (service met
 | [`label-studio/`](services/label-studio/) | Label Studio — data labeling for ML training | CPU |
 | [`anythingllm/`](services/anythingllm/) | AnythingLLM — all-in-one RAG + chat + agents | AMD, NVIDIA |
 | [`privacy-shield/`](services/privacy-shield/) | Privacy Shield — PII detection/redaction proxy | AMD, NVIDIA |
+
+## Platform Compatibility
+
+Quick reference for hardware requirements. Data sourced from each service's `manifest.yaml`.
+
+| Service | NVIDIA | AMD | Apple Silicon | CPU Only | Min VRAM |
+|---------|:------:|:---:|:-------------:|:--------:|:--------:|
+| aider | ✓ | ✓ | ✓ | — | — |
+| anythingllm | ✓ | ✓ | — | — | 2 GB |
+| audiocraft | ✓ | — | — | — | 6 GB |
+| bark | ✓ | — | — | — | 4 GB |
+| baserow | — | — | — | ✓ | — |
+| chromadb | ✓ | ✓ | ✓ | — | — |
+| continue | ✓ | ✓ | ✓ | — | 4 GB |
+| crewai | — | — | — | ✓ | — |
+| dify | ✓ | ✓ | — | — | 4 GB |
+| flowise | ✓ | ✓ | ✓ | — | — |
+| fooocus | ✓ | — | — | — | 8 GB |
+| forge | ✓ | — | — | — | 8 GB |
+| frigate | ✓ | — | — | — | 1 GB |
+| gitea | — | — | — | ✓ | — |
+| immich | ✓ | ✓ | — | — | 2 GB |
+| invokeai | ✓ | ✓ | — | — | 8 GB |
+| jan | ✓ | ✓ | — | — | — |
+| jupyter | ✓ | ✓ | — | — | 4 GB |
+| label-studio | — | — | — | ✓ | — |
+| langflow | ✓ | ✓ | ✓ | — | — |
+| librechat | ✓ | ✓ | ✓ | — | — |
+| localai | ✓ | ✓ | — | — | 4 GB |
+| milvus | — | — | — | ✓ | — |
+| ollama | ✓ | ✓ | — | — | 8 GB |
+| open-interpreter | — | — | — | ✓ | — |
+| paperless-ngx | — | — | — | ✓ | — |
+| piper-audio | ✓ | ✓ | ✓ | — | — |
+| privacy-shield | ✓ | ✓ | — | — | — |
+| rvc | ✓ | ✓ | — | — | 6 GB |
+| sillytavern | ✓ | ✓ | ✓ | — | — |
+| text-generation-webui | ✓ | ✓ | — | — | 4 GB |
+| weaviate | — | — | — | ✓ | — |
+| xtts | ✓ | ✓ | — | — | — |
+
+> **Note:** "Min VRAM" shows the minimum GPU memory needed for the service's base feature. Some advanced features may require more. Services marked "CPU Only" have no GPU acceleration. Apple Silicon support means the service can use Metal/MPS for acceleration.
 
 ---
 
