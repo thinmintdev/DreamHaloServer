@@ -57,6 +57,16 @@ else
     if $DRY_RUN; then
         log "[DRY RUN] Would install Docker via official script"
     else
+        # In non-interactive mode, fail fast if sudo requires a password
+        if [[ "${INTERACTIVE:-true}" != "true" ]] && ! sudo -n true 2>/dev/null; then
+            ai_bad "Docker is not installed and sudo requires a password."
+            ai_bad "In non-interactive mode, either:"
+            ai "  1. Run with passwordless sudo (NOPASSWD in sudoers)"
+            ai "  2. Install Docker manually first, then re-run with --skip-docker"
+            ai "  3. Run the installer interactively (without --non-interactive)"
+            error "Cannot install Docker without sudo in non-interactive mode."
+        fi
+
         case "$PKG_MANAGER" in
             apt|dnf|zypper)
                 # Docker CE via get.docker.com (supports Debian/Ubuntu/Fedora/RHEL/SLES)
