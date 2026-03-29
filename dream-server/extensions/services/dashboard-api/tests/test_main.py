@@ -1,7 +1,7 @@
 """Tests for main.py — core endpoints and helper functions."""
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -541,7 +541,7 @@ class TestCoreEndpoints:
 class TestStatusEndpoint:
 
     def test_returns_full_status(self, test_client, monkeypatch):
-        from models import GPUInfo, DiskUsage, ModelInfo, BootstrapStatus, ServiceStatus
+        from models import GPUInfo, DiskUsage, ModelInfo, BootstrapStatus
         monkeypatch.setattr("main.get_gpu_info", lambda: GPUInfo(
             name="RTX 4090", memory_used_mb=2048, memory_total_mb=24576,
             memory_percent=8.3, utilization_percent=35, temperature_c=62,

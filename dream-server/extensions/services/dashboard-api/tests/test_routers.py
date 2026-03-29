@@ -564,7 +564,6 @@ def test_setup_complete_removes_progress(test_client, setup_config_dir):
 def test_setup_test_no_script_fallback(test_client, monkeypatch):
     """POST /api/setup/test when script not found → streaming connectivity test."""
     import routers.setup as setup_mod
-    from pathlib import Path
 
     monkeypatch.setattr(setup_mod, "INSTALL_DIR", "/tmp/nonexistent-dream")
 
@@ -581,9 +580,6 @@ def test_setup_test_no_script_fallback(test_client, monkeypatch):
 
 def test_chat_success(test_client, monkeypatch):
     """POST /api/chat with mocked LLM → 200, returns response."""
-    import aiohttp
-    import json
-
     resp_mock = AsyncMock()
     resp_mock.status = 200
     resp_mock.json = AsyncMock(return_value={

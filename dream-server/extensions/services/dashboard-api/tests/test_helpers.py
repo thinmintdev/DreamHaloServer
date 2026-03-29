@@ -736,7 +736,7 @@ class TestGetUptimePlatforms:
 
     def test_darwin_branch(self, monkeypatch):
         monkeypatch.setattr("helpers.platform.system", lambda: "Darwin")
-        import subprocess, time
+        import time
         mock_result = MagicMock()
         mock_result.returncode = 0
         boot_time = int(time.time()) - 600

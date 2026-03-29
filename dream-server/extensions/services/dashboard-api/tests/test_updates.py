@@ -1,7 +1,6 @@
 """Tests for updates router endpoints."""
 
 import json
-from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 
 import httpx
