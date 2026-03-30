@@ -130,7 +130,6 @@ if ext_dir.exists():
         import yaml
         yaml_available = True
     except ImportError:
-        import json as yaml  # fallback if yaml not available
         yaml_available = False
 
     for service_dir in sorted(ext_dir.iterdir()):
@@ -149,8 +148,10 @@ if ext_dir.exists():
             with open(manifest_path) as f:
                 if manifest_path.suffix == ".json":
                     manifest = json.load(f)
-                else:
+                elif yaml_available:
                     manifest = yaml.safe_load(f)
+                else:
+                    continue  # skip YAML manifests when PyYAML unavailable
             if manifest.get("schema_version") != "dream.services.v1":
                 continue
             service = manifest.get("service", {})
