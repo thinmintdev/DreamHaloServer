@@ -62,6 +62,7 @@ $SourceRoot = (Resolve-Path (Join-Path (Join-Path $ScriptDir "..") "..")).Path
 $LibDir = Join-Path $ScriptDir "lib"
 . (Join-Path $LibDir "constants.ps1")
 . (Join-Path $LibDir "ui.ps1")
+. (Join-Path $LibDir "compose-diagnostics.ps1")
 . (Join-Path $LibDir "tier-map.ps1")
 . (Join-Path $LibDir "detection.ps1")
 . (Join-Path $LibDir "env-generator.ps1")
@@ -534,21 +535,7 @@ if ($dryRun) {
         }
         if ($composeExit -ne 0) {
             Write-AIError "docker compose up failed (exit code: $composeExit)"
-            # The streaming output above may have scrolled past or PS 5.1 may have
-            # swallowed stderr ErrorRecords. Run config validation to surface the
-            # root cause (missing env vars, invalid YAML, etc.) clearly at the end.
-            $ErrorActionPreference = "SilentlyContinue"
-            $_configOutput = & docker compose @composeFlags config 2>&1
-            $_configExit = $LASTEXITCODE
-            $ErrorActionPreference = $prevEAP
-            if ($_configExit -ne 0) {
-                Write-AI "  Configuration error:"
-                $_configOutput | ForEach-Object { Write-AI "    $_" }
-            }
-            Write-AI "  To debug manually:"
-            Write-AI "    cd $installDir"
-            Write-AI "    docker compose $($composeFlags -join ' ') config"
-            Write-AI "    docker compose $($composeFlags -join ' ') up 2>&1"
+            Write-DreamComposeDiagnostics -InstallDir $installDir -ComposeFlags $composeFlags -Phase "install-windows.ps1 docker compose up -d"
             exit 1
         }
         Write-AISuccess "Docker services started"

@@ -36,6 +36,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LibDir = Join-Path $ScriptDir "lib"
 . (Join-Path $LibDir "constants.ps1")
 . (Join-Path $LibDir "ui.ps1")
+. (Join-Path $LibDir "compose-diagnostics.ps1")
 . (Join-Path $LibDir "detection.ps1")
 
 # ── Resolve install directory ──
@@ -410,11 +411,24 @@ function Invoke-Start {
         $flags = Get-ComposeFlags
         if ($Service) {
             Write-AI "Starting $Service..."
-            & docker compose @flags up -d $Service
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("up", "-d", $Service)
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose up failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags `
+                    -Phase "dream.ps1 start ($Service)"
+                exit 1
+            }
             Write-AISuccess "$Service started"
         } else {
             Write-AI "Starting all services..."
-            & docker compose @flags up -d
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("up", "-d")
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose up failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags -Phase "dream.ps1 start (all)"
+                exit 1
+            }
             Write-AISuccess "All services started"
         }
     } finally {
@@ -430,11 +444,24 @@ function Invoke-Stop {
         $flags = Get-ComposeFlags
         if ($Service) {
             Write-AI "Stopping $Service..."
-            & docker compose @flags stop $Service
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("stop", $Service)
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose stop failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags `
+                    -Phase "dream.ps1 stop ($Service)"
+                exit 1
+            }
             Write-AISuccess "$Service stopped"
         } else {
             Write-AI "Stopping all services..."
-            & docker compose @flags down
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("down")
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose down failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags -Phase "dream.ps1 stop (all)"
+                exit 1
+            }
 
             # Stop native inference server (AMD path)
             if (Test-Path $script:INFERENCE_PID_FILE) {
@@ -456,7 +483,14 @@ function Invoke-Restart {
         $flags = Get-ComposeFlags
         if ($Service) {
             Write-AI "Restarting $Service..."
-            & docker compose @flags restart $Service
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("restart", $Service)
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose restart failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags `
+                    -Phase "dream.ps1 restart ($Service)"
+                exit 1
+            }
             Write-AISuccess "$Service restarted"
         } else {
             # For AMD, also restart native inference server
@@ -465,7 +499,13 @@ function Invoke-Restart {
                 Start-NativeInferenceServer
             }
             Write-AI "Restarting all services..."
-            & docker compose @flags restart
+            $composeExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+                -ComposeArgs @("restart")
+            if ($composeExit -ne 0) {
+                Write-AIError "docker compose restart failed (exit code: $composeExit)"
+                Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags -Phase "dream.ps1 restart (all)"
+                exit 1
+            }
             Write-AISuccess "All services restarted"
         }
     } finally {
@@ -555,9 +595,20 @@ function Invoke-Update {
     try {
         $flags = Get-ComposeFlags
         Write-AI "Pulling latest images..."
-        & docker compose @flags pull
+        $pullExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags -ComposeArgs @("pull")
+        if ($pullExit -ne 0) {
+            Write-AIError "docker compose pull failed (exit code: $pullExit)"
+            Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags -Phase "dream.ps1 update (pull)"
+            exit 1
+        }
         Write-AI "Recreating containers..."
-        & docker compose @flags up -d --force-recreate
+        $upExit = Invoke-DreamDockerCompose -InstallDir $InstallDir -ComposeFlags $flags `
+            -ComposeArgs @("up", "-d", "--force-recreate")
+        if ($upExit -ne 0) {
+            Write-AIError "docker compose up failed (exit code: $upExit)"
+            Write-DreamComposeDiagnostics -InstallDir $InstallDir -ComposeFlags $flags -Phase "dream.ps1 update (up --force-recreate)"
+            exit 1
+        }
         Write-AISuccess "Update complete"
 
         Start-Sleep -Seconds 5
