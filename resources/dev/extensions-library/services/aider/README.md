@@ -1,27 +1,24 @@
-# Aider Extension for Dream Server
+# Aider
 
-## Overview
+AI pair programming in your terminal. Edit code in your local git repository using natural language instructions, with support for multiple AI models.
 
-Aider is AI pair programming in your terminal. It allows you to edit code in your local git repository using natural language instructions, with support for multiple AI models.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA, AMD, or Apple Silicon
+- **Dependencies:** None
 
-- Edit code using natural language
-- Multi-file editing with git awareness
-- Integrates with git (commits, diffs, branches)
-- Support for OpenAI, Anthropic, and local models
-- Code linting and test execution
-- Voice coding support (with Piper TTS)
-
-## Usage
-
-### Enable the extension
+## Enable / Disable
 
 ```bash
-dream extensions enable aider
+dream enable aider
+dream disable aider
 ```
 
-### Run Aider
+Your data is preserved when disabling. To re-enable later: `dream enable aider`
+
+## Access
+
+Aider is a CLI tool with no web interface. Run it via Docker:
 
 ```bash
 # Start an interactive session
@@ -34,19 +31,13 @@ docker compose run --rm aider src/main.py src/utils.py
 docker compose run --rm aider --model ollama/llama3 src/
 ```
 
-## Configuration
+## First-Time Setup
 
-| Environment Variable | Description |
-|---------------------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `AIDER_MODEL` | Main model (default: openrouter/anthropic/claude-sonnet-4) |
-| `AIDER_WEAK_MODEL` | Weak/fast model for simple tasks |
-| `AIDER_OPENAI_API_BASE` | Custom OpenAI-compatible endpoint |
+1. Enable the service: `dream enable aider`
+2. Place your projects in `./data/aider/` to make them available
+3. Run `docker compose run --rm aider` to start a session
 
 ### Using with Local Models
-
-To use with Dream Server's local LLM:
 
 ```bash
 docker compose run --rm aider \
@@ -55,25 +46,9 @@ docker compose run --rm aider \
   src/
 ```
 
-## Data Persistence
+## Configuration
 
-Place your projects in `./data/aider/` to make them available to Aider.
-
-## Integration
-
-Aider works with:
-- **Local LLMs** — Via OpenAI-compatible API
-- **Git repositories** — Automatic commit management
-- **Piper TTS** — Voice coding support
-
-## Uninstall
-
-```bash
-dream extensions disable aider
-```
-
-Your projects in `./data/aider/` are preserved.
-
-## Documentation
-
-Full docs: <https://aider.chat/docs/>
+| Variable | Description | Default |
+|----------|------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key | _(optional)_ |
+| `ANTHROPIC_API_KEY` | Anthropic API key | _(optional)_ |

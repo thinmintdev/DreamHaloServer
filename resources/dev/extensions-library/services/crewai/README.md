@@ -1,34 +1,27 @@
-# CrewAI Studio
+# CrewAI
 
-No-code multi-agent AI workflow builder.
+Multi-agent framework for AI workflows. Build teams of autonomous AI agents that collaborate, delegate tasks, and work together to solve complex problems through a no-code visual builder.
 
-## Features
+## Requirements
 
-- **Visual crew builder**: Create agents and tasks through UI
-- **Local LLM support**: Works with Dream Server's local models
-- **Multi-provider**: OpenAI, Ollama, LM Studio, Groq, Anthropic
-- **Export**: Save crews as standalone Streamlit apps
+- **GPU:** CPU only — no GPU required
+- **Dependencies:** None
 
-## Configuration
+## Enable / Disable
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CREWAI_HOST` | `crewai` | Hostname for service |
-| `CREWAI_PORT` | `8501` | External port for UI |
-| `LLM_API_URL` | (from env) | Dream Server LLM endpoint |
-| `OPENAI_API_KEY` | `dream-local` | API key for local LLM |
+```bash
+dream enable crewai
+dream disable crewai
+```
 
-## Usage
+Your data is preserved when disabling. To re-enable later: `dream enable crewai`
 
-1. Start the service: `docker compose up -d`
-2. Access at `http://localhost:8501`
-3. Create agents, define tasks, and run crews
+## Access
 
-## Data Persistence
+- **URL:** `http://localhost:8501`
 
-- Crew configurations and history: `./data/crewai/`
+## First-Time Setup
 
-## Resources
-
-- [CrewAI Documentation](https://docs.crewai.com/)
-- [CrewAI-Studio GitHub](https://github.com/strnad/CrewAI-Studio)
+1. Enable the service: `dream enable crewai`
+2. Open `http://localhost:8501`
+3. Create agents, define tasks, and run crews through the visual builder

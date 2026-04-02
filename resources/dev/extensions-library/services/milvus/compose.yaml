@@ -1,15 +1,16 @@
-name: milvus
-
 services:
   milvus:
     image: milvusdb/milvus:v2.4.5
     container_name: dream-milvus
     ports:
-      - "${MILVUS_PORT:-19530}:19530"
+      - "127.0.0.1:${MILVUS_PORT:-19530}:19530"
     volumes:
       - ./data/milvus:/var/lib/milvus
     environment:
       - MODE=standalone
+      - ETCD_USE_EMBED=true
+      - COMMON_STORAGETYPE=local
+    command: ["milvus", "run", "standalone"]
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -19,7 +20,7 @@ services:
           cpus: '2'
           memory: 8G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9091/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -30,4 +31,3 @@ services:
 networks:
   dream-network:
     external: true
-    name: dream-network

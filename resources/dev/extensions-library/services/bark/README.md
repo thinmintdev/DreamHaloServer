@@ -1,75 +1,57 @@
 # Bark TTS
 
-Suno AI's transformer-based text-to-audio model. Generates highly expressive, realistic speech including laughter, sighs, and emotion — far beyond what traditional TTS can do. Supports 13 languages.
+Transformer-based text-to-audio model by Suno AI. Generates highly expressive, realistic speech including laughter, sighs, and emotion — far beyond traditional TTS. Supports 13 languages with multiple voice presets.
 
-## What It Does
+## Requirements
 
-- Expressive speech with natural prosody, laughter, sighs, hesitation
-- 13 language presets: English, German, Spanish, French, Hindi, Italian, Japanese, Korean, Polish, Portuguese, Russian, Turkish, Chinese
-- Multiple speaker voices per language (10 per language)
-- Non-verbal sounds: [laughter], [sighs], [gasps], [clears throat], [music]
-- REST API compatible with n8n workflows
+- **GPU:** NVIDIA (min 4 GB VRAM)
+- **Dependencies:** None
 
-## Quick Start
+## Enable / Disable
 
 ```bash
-dream extensions enable bark
+dream enable bark
+dream disable bark
 ```
 
-**Note:** First startup downloads ~5GB of models. This can take 10-20 minutes depending on your connection. Subsequent starts are instant.
+Your data is preserved when disabling. To re-enable later: `dream enable bark`
 
-Open **http://localhost:9200** to access the API docs.
+## Access
 
-## API Usage
+- **URL:** `http://localhost:9200` (API docs)
 
-### Generate Speech (Base64 response)
+## First-Time Setup
+
+1. Enable the service: `dream enable bark`
+2. Wait for first startup to download ~5 GB of models (10-20 minutes)
+3. Access the API at `http://localhost:9200`
+
+### API Examples
+
 ```bash
+# Generate speech (Base64 response)
 curl -X POST http://localhost:9200/tts \
   -H "Content-Type: application/json" \
   -d '{"text": "Hello! [laughs] This is Bark TTS.", "voice_preset": "v2/en_speaker_6"}'
-```
 
-### Get Raw Audio (WAV)
-```bash
+# Get raw audio (WAV)
 curl -X POST http://localhost:9200/tts/stream \
   -H "Content-Type: application/json" \
   -d '{"text": "Hello from Bark!", "voice_preset": "v2/en_speaker_3"}' \
   --output output.wav
-```
 
-### List Voice Presets
-```bash
+# List voice presets
 curl http://localhost:9200/voices
 ```
 
-## Special Text Tokens
+### Special Text Tokens
 
-Bark understands non-verbal cues in brackets:
-- `[laughter]` — add laughter
-- `[sighs]` — add a sigh
-- `[music]` — add a music clip
-- `[gasps]` — add a gasp
-- `[clears throat]` — throat clearing
-- `...` — add natural pauses
-- `♪` — singing mode
+Bark understands non-verbal cues in brackets: `[laughter]`, `[sighs]`, `[music]`, `[gasps]`, `[clears throat]`, `...` (pauses), `♪` (singing mode).
 
-## VRAM Requirements
+## Configuration
 
-| Mode | VRAM |
-|------|------|
-| Full models | ~4GB |
-| Small models (`BARK_USE_SMALL_MODELS=true`) | ~2GB |
-| CPU offload | <1GB VRAM (slow) |
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BARK_USE_SMALL_MODELS` | `false` | Use smaller/faster models |
-| `BARK_OFFLOAD_CPU` | `false` | Offload to CPU between requests |
-| `BARK_PORT` | `9200` | External port |
-
-## Data Persistence
-
-- `./data/bark/models/` — Bark model cache (~5GB)
-- `./data/bark/output/` — Generated audio files
+| Variable | Description | Default |
+|----------|------------|---------|
+| `BARK_USE_SMALL_MODELS` | Use smaller/faster models (less VRAM) | `false` |
+| `BARK_OFFLOAD_CPU` | Offload to CPU between requests | `false` |
+| `BARK_API_KEY` | API key for authentication (optional) | _(empty)_ |

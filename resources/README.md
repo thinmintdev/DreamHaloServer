@@ -134,7 +134,7 @@ GPU cluster setup, deployment runbooks, golden build reference, LiveKit deployme
 
 These are actively being tested and used internally but not yet cleared for production. See [`dev/README.md`](dev/README.md) for usage instructions and the full roadmap.
 
-### [`legacy/`](legacy/) — Historical Files
+### [`legacy/`](legacy/) — 14 Historical Files
 
 Old compose files, systemd units, and configs from earlier DreamServer iterations. Kept for reference.
 

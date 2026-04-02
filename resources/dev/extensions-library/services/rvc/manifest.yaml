@@ -4,7 +4,7 @@ service:
   id: rvc
   name: RVC
   aliases: [voice-conversion, voice-clone]
-  container_name: rvc
+  container_name: dream-rvc
   host_env: RVC_HOST
   default_host: rvc
   port: 7865
@@ -16,6 +16,7 @@ service:
   compose_file: compose.yaml
   category: optional
   depends_on: []
+  description: "Real-time voice conversion and cloning engine for transforming vocal characteristics."
   env_vars:
     - key: RVC_API_KEY
       description: API key for RVC service authentication (optional; leave empty to disable auth)

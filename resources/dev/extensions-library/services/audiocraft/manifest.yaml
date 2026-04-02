@@ -9,7 +9,7 @@ service:
   default_host: audiocraft
   port: 7860
   external_port_env: AUDIOCRAFT_PORT
-  external_port_default: 7860
+  external_port_default: 7863
   health: /
   type: docker
   gpu_backends: [nvidia]

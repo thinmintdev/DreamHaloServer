@@ -1,35 +1,28 @@
 # Label Studio
 
-Open source data labeling tool for machine learning.
+Open-source data labeling tool for machine learning. Label images, audio, text, time series, and more — with multi-user collaboration, quality control, and export to common ML formats.
 
-## Features
+## Requirements
 
-- **Multi-format support**: Images, audio, text, time series, video
-- **Project templates**: Pre-configured for common ML tasks
-- **Collaboration**: Multi-user labeling with quality control
-- **Export formats**: JSON, CSV, COCO, Pascal VOC, and more
+- **GPU:** CPU only — no GPU required
+- **Dependencies:** None
 
-## Configuration
+## Enable / Disable
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LABEL_STUDIO_HOST` | `label-studio` | Hostname for service |
-| `LABEL_STUDIO_PORT` | `8085` | External port for UI |
+```bash
+dream enable label-studio
+dream disable label-studio
+```
 
-## Usage
+Your data is preserved when disabling. To re-enable later: `dream enable label-studio`
 
-1. Start the service: `docker compose up -d`
-2. Access at `http://localhost:8085`
-3. Create a project and import data for labeling
+## Access
 
-## Data Persistence
+- **URL:** `http://localhost:8086`
 
-- Project data: `./data/label-studio/`
-- Uploads: `./upload/`
-- Media files: `./media/`
-- Static assets: `./www/`
+## First-Time Setup
 
-## Resources
-
-- [Label Studio Documentation](https://labelstud.io/guide/)
-- [GitHub](https://github.com/heartexlabs/label-studio)
+1. Enable the service: `dream enable label-studio`
+2. Open `http://localhost:8086`
+3. Create an account on first launch
+4. Create a project and import data for labeling

@@ -1,34 +1,28 @@
 # Continue (AI Coding Assistant)
 
-Open-source AI coding assistant for VS Code and JetBrains IDEs.
+Open-source AI coding assistant for VS Code and JetBrains IDEs. Uses Dream Server's local LLM for code completion and chat — no cloud required.
 
-## Features
+## Requirements
 
-- **IDE integration**: Native extensions for VS Code and JetBrains
-- **Local LLM support**: Uses Dream Server's local models
-- **Code completion**: Inline suggestions and chat
-- **Privacy**: Code never leaves your machine
+- **GPU:** NVIDIA, AMD, or Apple Silicon
+- **Dependencies:** llama-server
 
-## Configuration
+## Enable / Disable
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CONTINUE_HOST` | `continue` | Hostname for service |
-| `CONTINUE_PORT` | `8890` | External port for config server |
-| `LLM_API_URL` | (from env) | Dream Server LLM endpoint |
+```bash
+dream enable continue
+dream disable continue
+```
 
-## Usage
+Your data is preserved when disabling. To re-enable later: `dream enable continue`
 
-1. Start the service: `docker compose up -d`
-2. Install Continue extension in your IDE
-3. Configure IDE to use `http://<dream-server>:8890` as remote config server
+## Access
+
+- **URL:** `http://localhost:8890` (config server)
+
+## First-Time Setup
+
+1. Enable the service: `dream enable continue`
+2. Install the Continue extension in your IDE (VS Code or JetBrains)
+3. Configure IDE to use `http://<dream-server>:8890` as the remote config server
 4. Or manually set the API base URL to Dream Server's LLM endpoint
-
-## Data Persistence
-
-- Config and history: `./data/continue/`
-
-## Resources
-
-- [Continue Documentation](https://docs.continue.dev/)
-- [GitHub](https://github.com/continuedev/continue)

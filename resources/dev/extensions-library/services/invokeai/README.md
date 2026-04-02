@@ -1,49 +1,28 @@
-# InvokeAI Extension
+# InvokeAI
 
-Professional-grade image generation with Stable Diffusion.
+Leading creative engine for Stable Diffusion models. Professional-grade image generation with a node-based canvas, layer support, ControlNet, and FLUX model compatibility.
 
-## Description
+## Requirements
 
-InvokeAI is a leading creative engine for Stable Diffusion models, empowering professionals, artists, and enthusiasts to generate and create visual media using the latest AI-driven technologies.
+- **GPU:** NVIDIA or AMD (min 8 GB VRAM, 12 GB+ recommended for FLUX models)
+- **Dependencies:** None
 
-## Features
+## Enable / Disable
 
-- **Image Generation**: State-of-the-art Stable Diffusion with FLUX model support
-- **Node Canvas**: Visual workflow builder for complex image pipelines
-- **Control Layers**: ControlNet and Control LoRA for precise image control
-- **Layer Support**: Non-destructive editing with full layer management
-- **Professional UI**: Best-in-class interface for serious creators
+```bash
+dream enable invokeai
+dream disable invokeai
+```
 
-## GPU Requirements
+Your data is preserved when disabling. To re-enable later: `dream enable invokeai`
 
-- **Minimum**: 8GB VRAM (NVIDIA or AMD)
-- **Recommended**: 12GB+ VRAM for FLUX models
-- **Optimal**: 24GB+ VRAM for maximum flexibility
+## Access
 
-## Configuration
+- **URL:** `http://localhost:9090`
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `INVOKEAI_PORT` | 9090 | External port for the UI |
-| `INVOKEAI_HOST` | invokeai | Hostname for service discovery |
+## First-Time Setup
 
-## Data Persistence
-
-All data is stored in `./data/invokeai/`:
-- Models and checkpoints
-- Configuration files
-- Generated outputs
-
-## Usage
-
-1. Enable the extension in the Dream Dashboard
-2. Access the UI at `http://localhost:9090`
+1. Enable the service: `dream enable invokeai`
+2. Open `http://localhost:9090`
 3. Install models through the Model Manager
 4. Start generating images
-
-## Upstream
-
-- **Website**: https://invoke.ai
-- **Documentation**: https://invoke-ai.github.io/InvokeAI/
-- **GitHub**: https://github.com/invoke-ai/InvokeAI
-- **License**: Apache 2.0

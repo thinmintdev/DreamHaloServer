@@ -1,11 +1,11 @@
 services:
   localai:
-    image: localai/localai:v3.12.1-aio-cpu@sha256:7b8b2b7765c94c054db1b2e25e4fcab53d6316f5de67bd46041d2cf306fb2356
-    container_name: localai
+    image: localai/localai:v3.12.1-aio-cpu@sha256:4cbc20c59558ed6c1cae9bc3f6ae34d75d390b370aa8ac62a59327089fa56cec
+    container_name: dream-localai
     networks:
       - dream-network
     ports:
-      - "${LOCALAI_EXTERNAL_PORT:-7803}:8080"
+      - "127.0.0.1:${LOCALAI_EXTERNAL_PORT:-7803}:8080"
     volumes:
       - ./data/localai/models:/models
       - ./data/localai/builds:/builds
@@ -20,7 +20,7 @@ services:
           cpus: '4'
           memory: 8G
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

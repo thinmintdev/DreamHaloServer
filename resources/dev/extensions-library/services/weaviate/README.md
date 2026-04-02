@@ -1,28 +1,33 @@
 # Weaviate
 
-Enterprise-grade vector database for semantic search and generative AI.
-
-## Overview
-
-Weaviate is a scalable vector database that powers semantic search, generative AI, and RAG applications with hybrid search capabilities.
-
-## Features
-
-- **Vector Search**: High-performance vector similarity search
-- **Semantic Search**: Natural language queries
-- **Generative AI**: Built-in generative capabilities
-- **GraphQL**: Flexible GraphQL API
-
-## Configuration
-
-- **Port**: `WEAVIATE_PORT` (default: 8080)
-- **Data Directory**: `./data/weaviate`
-
-## Usage
-
-After installation, access the GraphQL API at `http://localhost:8080/v1/graphql`
+Open-source vector database for semantic search, hybrid search, and generative AI. Supports structured filtering, multi-tenancy, and both gRPC and RESTful APIs.
 
 ## Requirements
 
-- 4GB+ RAM recommended
-- No GPU required
+- **GPU:** CPU only — no GPU required
+- **Dependencies:** None
+
+## Enable / Disable
+
+```bash
+dream enable weaviate
+dream disable weaviate
+```
+
+Your data is preserved when disabling. To re-enable later: `dream enable weaviate`
+
+## Access
+
+- **URL:** `http://localhost:7811`
+- **GraphQL:** `http://localhost:7811/v1/graphql`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable weaviate`
+2. Use the REST API or GraphQL endpoint to create schemas and import data
+
+## Configuration
+
+| Variable | Description | Default |
+|----------|------------|---------|
+| `WEAVIATE_API_KEY` | API key for authentication (auto-generated) | _(required)_ |

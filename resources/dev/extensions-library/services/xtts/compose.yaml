@@ -1,11 +1,9 @@
-name: xtts
-
 services:
   xtts:
-    image: daswer123/xtts-api-server:latest
+    image: daswer123/xtts-api-server@sha256:491e0a198fc56c46d3dbb300ab993d29cc699813ea8fd1c6ee77aa80ab133e3e
     container_name: dream-xtts
     ports:
-      - "${XTTS_PORT:-8100}:80"
+      - "127.0.0.1:${XTTS_PORT:-8100}:80"
     volumes:
       - ./data/xtts:/app/tts_models
     environment:
@@ -22,10 +20,8 @@ services:
         reservations:
           cpus: '0.5'
           memory: 1G
-          devices:
-            - capabilities: ["gpu"]
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:80/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,34 +1,27 @@
 # Jan
 
-> **Status: Disabled** — Jan's Docker image (`jan-server`) is not yet stable enough for production inclusion. The compose file is preserved as `compose.yaml.disabled` for future re-evaluation. Jan overlaps with Open WebUI (already in the core stack) for chat functionality. Re-enable when Jan Server reaches v1.0+ with reliable API stability.
+A ChatGPT alternative that runs 100% offline on your computer. Multi-engine support (llama.cpp, TensorRT-LLM) with built-in model management — local-first, privacy-focused.
 
-A ChatGPT alternative that runs 100% offline on your computer.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA or AMD
+- **Dependencies:** None
 
-- **Local-first**: All data stays on your machine
-- **Multi-engine support**: llama.cpp, TensorRT-LLM
-- **Privacy-focused**: No cloud dependency
-- **Model management**: Built-in model downloader and manager
+## Enable / Disable
 
-## Configuration
+```bash
+dream enable jan
+dream disable jan
+```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `JAN_HOST` | `jan` | Hostname for Jan service |
-| `JAN_PORT` | `1337` | External port for Jan UI |
+Your data is preserved when disabling. To re-enable later: `dream enable jan`
 
-## Usage
+## Access
 
-1. Start the service: `docker compose up -d`
-2. Access at `http://localhost:1337`
+- **URL:** `http://localhost:1337`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable jan`
+2. Open `http://localhost:1337`
 3. Download models through the UI or place them in `./data/jan/models/`
-
-## Data Persistence
-
-- Models and conversations stored in `./data/jan/`
-
-## Resources
-
-- [Jan Documentation](https://jan.ai/docs)
-- [GitHub](https://github.com/janhq/jan)

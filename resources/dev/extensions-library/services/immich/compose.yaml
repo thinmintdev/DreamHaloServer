@@ -1,26 +1,24 @@
-name: immich
-
 services:
-  immich-server:
+  immich:
     image: ghcr.io/immich-app/immich-server:v1.131.3
-    container_name: immich
+    container_name: dream-immich
     ports:
-      - "${IMMICH_PORT:-2283}:2283"
+      - "127.0.0.1:${IMMICH_PORT:-2283}:2283"
     volumes:
       - ./data/immich/upload:/usr/src/app/upload
       - ./data/immich/backup:/usr/src/app/backup
     environment:
       - LLM_API_URL=${LLM_API_URL:-http://localhost:8000}
-      - DB_HOSTNAME=${IMMICH_DB_HOST:-postgres}
+      - DB_HOSTNAME=${IMMICH_DB_HOST:-immich-postgres}
       - DB_USERNAME=${IMMICH_DB_USER:-postgres}
-      - DB_PASSWORD=${IMMICH_DB_PASS:-postgres}
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD:-postgres}
       - DB_DATABASE_NAME=${IMMICH_DB_NAME:-immich}
-      - REDIS_HOSTNAME=${IMMICH_REDIS_HOST:-redis}
+      - REDIS_HOSTNAME=${IMMICH_REDIS_HOST:-immich-redis}
       - REDIS_PORT=${IMMICH_REDIS_PORT:-6379}
     depends_on:
-      postgres:
+      immich-postgres:
         condition: service_healthy
-      redis:
+      immich-redis:
         condition: service_healthy
     restart: unless-stopped
     security_opt:
@@ -31,7 +29,7 @@ services:
           memory: 4G
           cpus: '2.0'
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2283/api/server/ping"]
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:2283/api/server/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -39,8 +37,8 @@ services:
     networks:
       - dream-network
 
-  postgres:
-    image: postgres:16-alpine
+  immich-postgres:
+    image: docker.io/tensorchord/pgvecto-rs:pg16-v0.2.0
     container_name: immich-postgres
     volumes:
       - ./data/immich/postgres:/var/lib/postgresql/data
@@ -64,7 +62,7 @@ services:
     networks:
       - dream-network
 
-  redis:
+  immich-redis:
     image: redis:7-alpine
     container_name: immich-redis
     volumes:
@@ -88,4 +86,3 @@ services:
 networks:
   dream-network:
     external: true
-    name: dream-network

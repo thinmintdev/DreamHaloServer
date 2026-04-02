@@ -4,9 +4,9 @@ service:
   id: immich
   name: Immich
   aliases: [photos, media-backup]
-  container_name: immich-server
+  container_name: dream-immich
   host_env: IMMICH_HOST
-  default_host: immich-server
+  default_host: immich
   port: 2283
   external_port_env: IMMICH_PORT
   external_port_default: 2283
@@ -16,6 +16,7 @@ service:
   compose_file: compose.yaml
   category: optional
   depends_on: []
+  description: "Self-hosted Google Photos alternative with AI-powered face and object detection."
   env_vars:
     - key: IMMICH_DB_PASSWORD
       required: true

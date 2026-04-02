@@ -89,6 +89,11 @@ service:
   # optional:    User must run "dream enable <id>" to activate
   category: optional
 
+  # ── Description (REQUIRED) ──
+  # One-line human-readable summary of what this service does.
+  # Shown in dashboard and CLI. Keep it under ~100 characters.
+  description: "Short description of what this service does."
+
   # ── Dependencies (optional) ──
   # Other service IDs that must be running for this service to work.
   # "dream enable" will prompt to enable missing dependencies.

@@ -1,77 +1,54 @@
 # Open Interpreter
 
-A local LLM that can run code on your computer.
+Let LLMs run code locally (Python, JavaScript, Shell). Provides a ChatGPT-like interface that can control Chrome, create/edit files, analyze datasets, and more — fully local, no API costs.
 
-## What is Open Interpreter?
+## Requirements
 
-Open Interpreter lets LLMs run code locally (Python, JavaScript, Shell, etc.). It provides:
-- A ChatGPT-like interface in your terminal
-- Browser control for research tasks
-- File creation and editing
-- Data analysis and visualization
+- **GPU:** CPU only — no GPU required
+- **Dependencies:** None
 
-## Configuration
+## Enable / Disable
 
-The service connects to your local LLM via `${LLM_API_URL}` (default: `http://llama-server:8000`).
+```bash
+dream enable open-interpreter
+dream disable open-interpreter
+```
 
-## Usage
+Your data is preserved when disabling. To re-enable later: `dream enable open-interpreter`
 
-### Via API
+## Access
 
-Once running, access the API at `http://localhost:<port>`:
+- **API:** `http://localhost:7805`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable open-interpreter`
+2. Use the REST API or run interactively via CLI
+
+### API Usage
 
 ```bash
 # Health check
-curl http://localhost:8080/health
+curl http://localhost:7805/health
 
 # Chat (non-streaming)
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:7805/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "What OS are we running?", "stream": false}'
-
-# Chat (streaming)
-curl http://localhost:8080/chat/stream \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Plot AAPL stock price", "stream": true}'
 ```
 
-### Via Terminal (CLI)
+### CLI Usage
 
 ```bash
-# Run interpreter interactively
+# Interactive session
 docker compose run --rm open-interpreter
 
-# Run a single command
+# Single command
 docker compose run --rm open-interpreter -y "Create a file called test.txt"
 ```
 
-## Data Persistence
+## Configuration
 
-Data is stored in `./data/open-interpreter/`:
-
-- Chat history
-- Config files
-- Generated files
-
-## Ports
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `OPEN_INTERPRETER_PORT` | `8080` | API server port |
-| `LLM_API_URL` | `http://llama-server:8000` | Your local LLM endpoint |
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| Code Execution | Run Python, JavaScript, Shell code locally |
-| Browser Control | Control Chrome for web research |
-| File Operations | Create/edit files, images, videos, PDFs |
-| Data Analysis | Plot, clean, and analyze datasets |
-
-## Notes
-
-- No GPU required for basic usage
-- Browser automation needs Chrome installed on host
-- Code runs with `auto_run=True` by default (no manual approval)
+| Variable | Description | Default |
+|----------|------------|---------|
+| `OPEN_INTERPRETER_API_KEY` | API key for authentication | _(required)_ |

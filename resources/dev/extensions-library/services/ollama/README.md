@@ -1,56 +1,45 @@
-# Ollama Extension for Dream Server
+# Ollama
 
-## Overview
+Simple way to run open-source LLMs locally with GPU acceleration. Provides a dedicated Ollama instance integrated with Dream Server's stack for use by other extensions.
 
-Ollama is a simple way to run open-source LLMs locally. This extension provides a dedicated Ollama instance integrated with Dream Server's stack.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA or AMD (min 8 GB VRAM)
+- **Dependencies:** None
 
-- Runs Ollama with GPU acceleration (NVIDIA/AMD)
-- Pre-configured model: `llama3` (default)
-- Persistent storage for downloaded models
-- Health endpoint at `/api/health`
-
-## Usage
-
-### Enable the extension
+## Enable / Disable
 
 ```bash
-dream extensions enable ollama
+dream enable ollama
+dream disable ollama
 ```
 
-### Load a different model
+Your data is preserved when disabling. To re-enable later: `dream enable ollama`
 
-Edit `.env` and set:
+## Access
 
-```
-OLLAMA_MODEL=llama3:70b
-```
+- **API:** `http://localhost:7804`
 
-Then restart:
+## First-Time Setup
+
+1. Enable the service: `dream enable ollama`
+2. Pull a model: access the API or use a connected UI (Open WebUI, AnythingLLM, etc.)
+
+### API Endpoints
 
 ```bash
-docker compose down ollama && docker compose up -d ollama
+# Generate text
+curl http://localhost:7804/api/generate -d '{"model": "llama3", "prompt": "Hello!"}'
+
+# Chat
+curl http://localhost:7804/api/chat -d '{"model": "llama3", "messages": [{"role": "user", "content": "Hi"}]}'
+
+# List models
+curl http://localhost:7804/api/tags
 ```
 
-### API endpoint
+## Configuration
 
-```
-http://localhost:${OLLAMA_PORT:-11434}/api/generate
-http://localhost:${OLLAMA_PORT:-11434}/api/chat
-```
-
-## Integration
-
-Ollama works with:
-- **Open WebUI** — Use as the LLM backend
-- **LiteLLM** — Route requests through LiteLLM proxy
-- **n8n workflows** — Trigger LLM generations via webhook
-
-## Uninstall
-
-```bash
-dream extensions disable ollama
-```
-
-This removes the container and stops the service. Your downloaded models in `./data/ollama/` are preserved.
+| Variable | Description | Default |
+|----------|------------|---------|
+| `OLLAMA_MODEL` | Default model to load on startup | _(optional)_ |

@@ -1,11 +1,9 @@
-name: chromadb
-
 services:
   chromadb:
     image: chromadb/chroma:1.5.3
-    container_name: chromadb
+    container_name: dream-chromadb
     ports:
-      - "${CHROMADB_PORT:-8000}:8000"
+      - "127.0.0.1:${CHROMADB_PORT:-8000}:8000"
     volumes:
       - ./data/chromadb:/chromadb
     environment:
@@ -20,7 +18,7 @@ services:
           memory: 2G
           cpus: '2.0'
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8000 && printf \"GET /api/v2/heartbeat HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n\" >&3 && read -r line <&3 && [[ \"$$line\" == *\"200\"* ]]'"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -31,4 +29,3 @@ services:
 networks:
   dream-network:
     external: true
-    name: dream-network

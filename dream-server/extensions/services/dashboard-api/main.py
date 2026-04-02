@@ -77,7 +77,7 @@ _STORAGE_CACHE_TTL = 30.0
 _SERVICE_POLL_INTERVAL = 10.0  # background health check interval
 
 # --- Router imports ---
-from routers import workflows, features, setup, updates, agents, privacy, gpu as gpu_router
+from routers import workflows, features, setup, updates, agents, privacy, extensions, gpu as gpu_router
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,7 @@ app.include_router(setup.router)
 app.include_router(updates.router)
 app.include_router(agents.router)
 app.include_router(privacy.router)
+app.include_router(extensions.router)
 app.include_router(gpu_router.router)
 
 

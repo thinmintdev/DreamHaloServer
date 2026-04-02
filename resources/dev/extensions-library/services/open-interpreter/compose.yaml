@@ -1,5 +1,3 @@
-name: open-interpreter
-
 services:
   open-interpreter:
     build:
@@ -12,14 +10,16 @@ services:
     environment:
       - PORT=8080
       - LLM_API_URL=${LLM_API_URL:-http://llama-server:8000}
+      - OPEN_INTERPRETER_API_KEY=${OPEN_INTERPRETER_API_KEY:?OPEN_INTERPRETER_API_KEY must be set}
+      - OPEN_INTERPRETER_AUTO_RUN=${OPEN_INTERPRETER_AUTO_RUN:-false}
     volumes:
       - ./data/open-interpreter:/app/data:rw
     ports:
-      - "${OPEN_INTERPRETER_PORT:-7805}:8080"
+      - "127.0.0.1:${OPEN_INTERPRETER_PORT:-7805}:8080"
     working_dir: /app
     command: ["python", "server.py"]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

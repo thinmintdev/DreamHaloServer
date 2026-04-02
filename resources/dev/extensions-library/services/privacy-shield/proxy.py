@@ -80,14 +80,10 @@ class CachedPrivacyShield(PrivacyShield):
 
 def get_session(request: Request) -> CachedPrivacyShield:
     """Get or create session-specific PrivacyShield."""
-    # Use Authorization header or IP as session key
-    auth = request.headers.get("Authorization", "")
-    # Use SHA256 for deterministic, stable session keying (hash() is not deterministic across restarts)
-    if auth:
-        session_key = hashlib.sha256(auth.encode()).hexdigest()
-    else:
-        client_info = str(request.client.host if request.client else "default")
-        session_key = hashlib.sha256(client_info.encode()).hexdigest()
+    # Key on client IP to isolate PII between different callers.
+    # The shared SHIELD_API_KEY cannot differentiate users.
+    client_ip = request.client.host if request.client else "default"
+    session_key = hashlib.sha256(client_ip.encode()).hexdigest()
     
     if session_key not in sessions:
         sessions[session_key] = CachedPrivacyShield()
@@ -165,7 +161,7 @@ async def proxy(request: Request, path: str):
             )
         
         # Read response
-        response_body = resp.content.decode('utf-8')
+        response_body = resp.content.decode('utf-8', errors='replace')
         
         # Restore PII in response
         restored_body = shield.process_response(response_body)

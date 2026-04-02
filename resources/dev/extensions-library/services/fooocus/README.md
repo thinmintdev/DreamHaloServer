@@ -1,44 +1,29 @@
-# Fooocus Extension
+# Fooocus
 
-**Fooocus** is a user-friendly image generation UI built on top of Automatic1111. It provides an intuitive interface for generating high-quality images using Stable Diffusion.
+User-friendly image generation UI built on Stable Diffusion. Provides an intuitive interface for generating high-quality images from text descriptions with minimal configuration.
 
-## Extension Info
+## Requirements
 
-| Property | Value |
-|----------|-------|
-| **ID** | fooocus |
-| **Container Name** | dream-fooocus |
-| **Default Port** | 7865 |
-| **GPU Support** | AMD, NVIDIA |
-| **Depends On** | None (standalone) |
-| **Category** | Optional |
+- **GPU:** NVIDIA (min 8 GB VRAM)
+- **Dependencies:** None
 
-## What It Does
+## Enable / Disable
 
-Fooocus provides a simple, beautiful interface for generating AI images. It's designed to be easy to use while still offering powerful features like:
+```bash
+dream enable fooocus
+dream disable fooocus
+```
 
-- Text-to-image generation
-- Image-to-image generation
-- Advanced controlnet integration
-- Multiple sampling methods
-- High-resolution upscaling
+Your data is preserved when disabling. To re-enable later: `dream enable fooocus`
 
-## Configuration
+## Access
 
-Fooocus uses sensible defaults. No manual configuration needed.
+- **URL:** `http://localhost:7865`
 
-## Usage
+## First-Time Setup
 
-1. Enable the extension: `dream extensions enable fooocus`
-2. Access the UI at `http://localhost:7865`
+1. Enable the service: `dream enable fooocus`
+2. Open `http://localhost:7865`
 3. Start generating images with natural language prompts
 
-## Integration
-
-Fooocus runs as a standalone image generation service. It does not connect to Dream Server's LLM endpoint since it's purely an image generation tool.
-
-## Uninstall
-
-Disable the extension: `dream extensions disable fooocus`
-
-This will remove the container but preserve your generated images in `./data/fooocus/`.
+First startup may download several GB of model files. Subsequent starts are instant.

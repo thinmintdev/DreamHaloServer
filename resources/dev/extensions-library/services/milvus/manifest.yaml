@@ -7,12 +7,13 @@ service:
   container_name: dream-milvus
   host_env: MILVUS_HOST
   default_host: milvus
-  port: 9091
+  port: 19530
   external_port_env: MILVUS_PORT
   external_port_default: 19530
   health: /healthz
   type: docker
-  gpu_backends: [none]
+  gpu_backends: [all]
   compose_file: compose.yaml
   category: recommended
   depends_on: []
+  description: "Production-grade open-source vector database for scalable similarity search."

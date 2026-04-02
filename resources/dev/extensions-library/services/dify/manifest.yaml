@@ -7,15 +7,16 @@ service:
   container_name: dream-dify
   host_env: DIFY_HOST
   default_host: dify
-  port: 80
+  port: 5001
   external_port_env: DIFY_PORT
-  external_port_default: 8080
+  external_port_default: 8002
   health: /health
   type: docker
   gpu_backends: [amd, nvidia]
-  compose_file: compose.yaml
+  compose_file: compose.yaml.disabled
   category: optional
   depends_on: []
+  setup_hook: setup.sh
   env_vars:
     - key: DIFY_SECRET_KEY
       required: true
@@ -37,6 +38,7 @@ service:
       required: false
       secret: false
       description: Initial admin password (optional, set in .env)
+  description: "LLMOps platform for building AI workflows, RAG pipelines, and autonomous agents."
 
 features:
   - id: agent-platform

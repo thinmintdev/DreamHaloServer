@@ -19,7 +19,7 @@ services:
     volumes:
       - ./data/privacy-shield:/data
     ports:
-      - "${SHIELD_PORT:-7808}:8085"
+      - "127.0.0.1:${SHIELD_PORT:-7808}:8085"
     deploy:
       resources:
         limits:
@@ -29,7 +29,7 @@ services:
           cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/health', timeout=5)"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8085/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3

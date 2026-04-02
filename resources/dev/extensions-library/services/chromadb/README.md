@@ -1,68 +1,38 @@
-# ChromaDB Extension for Dream Server
+# ChromaDB
 
-## Overview
+AI-native open-source vector database for building embeddings-based applications. Store and query vector embeddings with metadata filtering via a simple REST API.
 
-ChromaDB is an AI-native open-source vector database designed for building embeddings-based applications with a focus on developer productivity and ease of use.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA, AMD, or Apple Silicon
+- **Dependencies:** None
 
-- Vector search with metadata filtering
-- Multiple embedding functions support
-- Persistent storage for embeddings and metadata
-- REST API for easy integration
-- GPU acceleration not required (CPU-based)
-
-## Usage
-
-### Enable the extension
+## Enable / Disable
 
 ```bash
-dream extensions enable chromadb
+dream enable chromadb
+dream disable chromadb
 ```
 
-### Access the API
+Your data is preserved when disabling. To re-enable later: `dream enable chromadb`
 
-```
-http://localhost:${CHROMADB_PORT:-8000}
-```
+## Access
 
-### Health Check
+- **URL:** `http://localhost:8000`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable chromadb`
+2. Use the REST API at `http://localhost:8000` to create collections and add embeddings
+
+### API Examples
 
 ```bash
-curl http://localhost:8000/api/v1/heartbeat
-```
+# Health check
+curl http://localhost:8000/api/v2/heartbeat
 
-## Integration
-
-ChromaDB integrates with:
-- **n8n workflows** — Vector search and storage nodes
-- **Custom applications** — Direct HTTP API access
-- **Embeddings service** — Store and query vector embeddings
-
-## API Examples
-
-### Create a collection
-```bash
-curl -X POST http://localhost:8000/api/v1/collections \
+# Create a collection
+curl -X POST http://localhost:8000/api/v2/collections \
   -H "Content-Type: application/json" \
   -d '{"name": "my_collection"}'
 ```
-
-### Add embeddings
-```bash
-curl -X POST http://localhost:8000/api/v1/collections/my_collection/add \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ids": ["doc1", "doc2"],
-    "embeddings": [[0.1, 0.2, ...], [0.3, 0.4, ...]],
-    "metadatas": [{"source": "doc1"}, {"source": "doc2"}]
-  }'
-```
-
-## Uninstall
-
-```bash
-dream extensions disable chromadb
-```
-
-This removes the container. Your data in `./data/chromadb/` is preserved.

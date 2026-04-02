@@ -206,6 +206,23 @@ if ext_dir.exists():
                 # Unexpected error — re-raise to crash visibly
                 raise
 
+# Discover enabled user-installed extensions (from dashboard portal)
+user_ext_dir = script_dir / "data" / "user-extensions"
+if user_ext_dir.exists():
+    try:
+        for service_dir in sorted(user_ext_dir.iterdir()):
+            if not service_dir.is_dir():
+                continue
+            compose_path = service_dir / "compose.yaml"
+            if compose_path.exists():
+                resolved.append(str(compose_path.relative_to(script_dir)))
+                # GPU-specific overlay
+                gpu_overlay = service_dir / f"compose.{gpu_backend}.yaml"
+                if gpu_overlay.exists():
+                    resolved.append(str(gpu_overlay.relative_to(script_dir)))
+    except OSError as e:
+        print(f"WARNING: Could not scan user-extensions: {e}", file=sys.stderr)
+
 # Include docker-compose.override.yml if it exists (user customizations)
 override = script_dir / "docker-compose.override.yml"
 if override.exists():

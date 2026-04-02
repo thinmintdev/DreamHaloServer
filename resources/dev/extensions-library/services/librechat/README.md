@@ -1,80 +1,39 @@
-# LibreChat Extension
+# LibreChat
 
-Enhanced ChatGPT clone with multi-provider AI support for Dream Server.
+Enhanced ChatGPT clone with multi-LLM support, agents, RAG, and file uploads. Supports OpenAI, Anthropic, Google, Azure, Groq, Mistral, OpenRouter, and custom endpoints.
 
-## What It Is
+## Requirements
 
-LibreChat provides a polished chat interface supporting multiple LLM providers:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Google (Gemini)
-- Azure OpenAI
-- Groq
-- Mistral
-- OpenRouter
-- Custom OpenAI-compatible endpoints
+- **GPU:** NVIDIA, AMD, or Apple Silicon
+- **Dependencies:** None
 
-## Features
+## Enable / Disable
 
-- **Multi-provider chat**: Switch between AI providers in one conversation
-- **RAG support**: Upload documents for AI to reference
-- **AI agents**: Plugin and tool support
-- **File uploads**: Images, documents, code files
-- **Conversation history**: Persistent chat history
-- **Multi-user**: Built-in authentication system
-- **Search**: Full-text search across conversations
+```bash
+dream enable librechat
+dream disable librechat
+```
+
+Your data is preserved when disabling. To re-enable later: `dream enable librechat`
+
+## Access
+
+- **URL:** `http://localhost:3080`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable librechat`
+2. Open `http://localhost:3080`
+3. Create an account on first launch
+4. Optionally connect to Dream Server's LLM via Settings: add custom endpoint `http://llama-server:8080/v1`
 
 ## Configuration
 
-### Environment Variables
-
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `LIBRECHAT_PORT` | External port | `3080` |
-| `LIBRECHAT_MONGO_PASSWORD` | MongoDB root password | `librechat123` |
-| `LIBRECHAT_MEILI_KEY` | Meilisearch master key | `librechat_meili_master_key` |
-
-### API Keys (Optional)
-
-Set any of these to enable the corresponding provider:
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GOOGLE_KEY`
-- `AZURE_OPENAI_API_KEY`
-- `GROQ_API_KEY`
-- `MISTRAL_API_KEY`
-- `OPENROUTER_KEY`
-- `DEEPSEEK_API_KEY`
-
-## Usage
-
-```bash
-# Enable the extension
-dream extensions enable librechat
-
-# Start the services
-docker compose up -d librechat
-
-# Access at http://localhost:3080
-```
-
-## Data Persistence
-
-User data is stored in:
-- `./data/librechat/mongodb/` - Chat history and user data
-- `./data/librechat/meilisearch/` - Search index
-- `./data/librechat/images/` - Uploaded images
-- `./data/librechat/uploads/` - File uploads
-- `./data/librechat/logs/` - Application logs
-
-## Integration with Dream Server
-
-LibreChat can use Dream Server's llama-server as a custom endpoint:
-1. Go to Settings → Endpoints
-2. Add custom endpoint: `http://llama-server:8080/v1`
-3. Set API key to any value (local llama-server doesn't require auth)
-
-## Resources
-
-- [LibreChat Documentation](https://www.librechat.ai/docs)
-- [GitHub Repository](https://github.com/danny-avila/LibreChat)
+|----------|------------|---------|
+| `JWT_SECRET` | JWT signing secret for sessions (auto-generated) | _(required)_ |
+| `JWT_REFRESH_SECRET` | JWT refresh token secret (auto-generated) | _(required)_ |
+| `LIBRECHAT_MONGO_PASSWORD` | MongoDB root password (auto-generated) | _(required)_ |
+| `LIBRECHAT_MEILI_KEY` | Meilisearch master key (auto-generated) | _(required)_ |
+| `CREDS_KEY` | AES-128 encryption key for stored credentials (auto-generated) | _(optional)_ |
+| `CREDS_IV` | AES initialization vector for credential encryption (auto-generated) | _(optional)_ |

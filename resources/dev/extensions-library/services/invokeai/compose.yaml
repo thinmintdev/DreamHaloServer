@@ -1,8 +1,6 @@
-name: invokeai
-
 services:
   invokeai:
-    image: ghcr.io/invoke-ai/invokeai:latest
+    image: ghcr.io/invoke-ai/invokeai:v6.11.1
     container_name: dream-invokeai
     restart: unless-stopped
     security_opt:
@@ -12,9 +10,9 @@ services:
     volumes:
       - ./data/invokeai:/invokeai:rw
     ports:
-      - "${INVOKEAI_PORT:-9090}:9090"
+      - "127.0.0.1:${INVOKEAI_PORT:-9090}:9090"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

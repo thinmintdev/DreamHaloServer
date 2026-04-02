@@ -4,17 +4,19 @@ service:
   id: localai
   name: LocalAI (OpenAI-compatible API)
   aliases: [local-ai, localai]
-  container_name: localai
+  container_name: dream-localai
   host_env: LOCALAI_HOST
   default_host: localai
   port: 8080
   external_port_env: LOCALAI_EXTERNAL_PORT
   external_port_default: 7803
-  health: /
+  health: /healthz
   type: docker
   gpu_backends: [amd, nvidia]
+  compose_file: compose.yaml
   category: optional
   depends_on: [llama-server]
+  description: "OpenAI-compatible API server for running open-source models locally."
 
 features:
   - id: text-generation
@@ -25,8 +27,8 @@ features:
     requirements:
       services: [localai]
       vram_gb: 4
+    enabled_services_all: [localai]
     priority: 5
-    gpu_backends: [amd, nvidia]
   - id: image-generation
     name: Image Generation
     description: Generate images with local diffusion models
@@ -35,8 +37,8 @@ features:
     requirements:
       services: [localai]
       vram_gb: 8
+    enabled_services_all: [localai]
     priority: 6
-    gpu_backends: [amd, nvidia]
   - id: audio-generation
     name: Audio Generation
     description: Generate audio with local models
@@ -45,8 +47,8 @@ features:
     requirements:
       services: [localai]
       vram_gb: 4
+    enabled_services_all: [localai]
     priority: 7
-    gpu_backends: [amd, nvidia]
   - id: video-generation
     name: Video Generation
     description: Generate video with local models
@@ -55,8 +57,8 @@ features:
     requirements:
       services: [localai]
       vram_gb: 16
+    enabled_services_all: [localai]
     priority: 8
-    gpu_backends: [amd, nvidia]
   - id: voice-cloning
     name: Voice Cloning
     description: Clone voices for TTS with local models
@@ -65,5 +67,5 @@ features:
     requirements:
       services: [localai]
       vram_gb: 4
+    enabled_services_all: [localai]
     priority: 9
-    gpu_backends: [amd, nvidia]

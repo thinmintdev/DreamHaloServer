@@ -320,6 +320,14 @@ else
         ai "Running in-place, skipping file copy"
     fi
 
+    # Copy extensions library to data dir for dashboard portal
+    _ext_lib_src="${SOURCE_ROOT}/resources/dev/extensions-library/services"
+    if [[ -d "$_ext_lib_src" ]]; then
+        mkdir -p "${INSTALL_DIR}/data/extensions-library"
+        cp -r "$_ext_lib_src/." "${INSTALL_DIR}/data/extensions-library/"
+        ai_ok "Extensions library copied to data/extensions-library/"
+    fi
+
     # Copy CLI tool to install root
     if [[ -f "${SCRIPT_DIR}/dream-macos.sh" ]]; then
         cp "${SCRIPT_DIR}/dream-macos.sh" "${INSTALL_DIR}/dream-macos.sh"
@@ -803,6 +811,60 @@ PLIST_EOF
             ai_warn "OpenCode LaunchAgent failed — start manually: opencode web --port 3003"
         fi
     fi
+fi
+
+# ── Dream Host Agent (extension lifecycle management) ──
+AGENT_PYTHON="$(command -v python3)"
+if [[ -f "${INSTALL_DIR}/bin/dream-host-agent.py" ]] && [[ -n "$AGENT_PYTHON" ]]; then
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$DREAM_AGENT_PLIST" <<AGENT_PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${DREAM_AGENT_PLIST_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${AGENT_PYTHON}</string>
+        <string>${INSTALL_DIR}/bin/dream-host-agent.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>${INSTALL_DIR}</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DREAM_HOME</key>
+        <string>${INSTALL_DIR}</string>
+        <key>HOME</key>
+        <string>${HOME}</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>${INSTALL_DIR}/data/dream-host-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>${INSTALL_DIR}/data/dream-host-agent.log</string>
+</dict>
+</plist>
+AGENT_PLIST_EOF
+
+    launchctl bootout "gui/$(id -u)/${DREAM_AGENT_PLIST_LABEL}" 2>/dev/null || true
+    if launchctl bootstrap "gui/$(id -u)" "$DREAM_AGENT_PLIST" 2>/dev/null; then
+        ai_ok "Dream host agent installed (LaunchAgent, port ${DREAM_AGENT_PORT})"
+    else
+        ai_warn "Dream host agent LaunchAgent failed — start manually: dream agent start"
+    fi
+else
+    [[ ! -f "${INSTALL_DIR}/bin/dream-host-agent.py" ]] && ai_warn "Host agent script not found, skipping"
+    [[ -z "$AGENT_PYTHON" ]] && ai_warn "python3 not found, host agent not installed"
 fi
 
 # ============================================================================

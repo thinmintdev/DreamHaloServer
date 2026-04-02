@@ -1,68 +1,41 @@
-# Piper TTS Extension for Dream Server
+# Piper TTS
 
-## Overview
+Fast, local neural text-to-speech system optimized for edge devices. Uses the Wyoming protocol for integration with Home Assistant and other services. Multiple voice models available across many languages.
 
-Piper is a fast, local neural text-to-speech system that sounds great and is optimized for edge devices including Raspberry Pi 4. It uses the Wyoming protocol for integration.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA, AMD, or Apple Silicon (CPU-based, no GPU required)
+- **Dependencies:** None
 
-- Local neural TTS (no cloud dependency)
-- Multiple voice models available
-- Low latency, optimized for edge
-- Wyoming protocol support
-- CPU-based (no GPU required)
-
-## Usage
-
-### Enable the extension
+## Enable / Disable
 
 ```bash
-dream extensions enable piper-audio
+dream enable piper-audio
+dream disable piper-audio
 ```
 
-### Wyoming Protocol Endpoint
+Your data is preserved when disabling. To re-enable later: `dream enable piper-audio`
 
-```
-tcp://localhost:${PIPER_PORT:-10200}
-```
+## Access
 
-### HTTP API (if supported by voice pipeline)
+- **Wyoming Protocol:** `tcp://localhost:10200`
 
-Check your voice pipeline configuration for HTTP endpoints.
+## First-Time Setup
 
-## Configuration
+1. Enable the service: `dream enable piper-audio`
+2. Connect via Wyoming protocol at `tcp://localhost:10200`
+3. Optionally change the voice model via the `PIPER_VOICE` environment variable
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PIPER_PORT` | 10200 | Wyoming protocol port |
-| `PIPER_VOICE` | en_US-lessac-medium | Default voice model |
-| `PIPER_LENGTH` | 1.0 | Speech speed (0.5-2.0) |
-| `PIPER_NOISE` | 0.667 | Noise scale (0.0-1.0) |
-| `PIPER_NOISEW` | 0.333 | Noise width (0.0-1.0) |
-| `PIPER_SPEAKER` | 0 | Speaker ID for multi-speaker voices |
-| `PIPER_PROCS` | 1 | Number of worker processes |
+### Popular Voices
 
-### Available Voices
-
-Popular voices include:
 - `en_US-lessac-medium` (default, high quality)
-- `en_US-lessac-low` (faster, lower quality)
 - `en_US-amy-medium`
 - `en_GB-southern_english_male-medium`
 
-Full list: <https://huggingface.co/rhasspy/piper-voices/tree/main>
+Full list: https://huggingface.co/rhasspy/piper-voices/tree/main
 
-## Integration
+## Configuration
 
-Piper integrates with:
-- **Home Assistant** — Via Wyoming protocol
-- **Open WebUI** — Voice output for chat responses
-- **n8n workflows** — TTS automation nodes
-
-## Uninstall
-
-```bash
-dream extensions disable piper-audio
-```
-
-Voice models in `./data/piper/` are preserved.
+| Variable | Description | Default |
+|----------|------------|---------|
+| `PIPER_VOICE` | Default voice model | `en_US-lessac-medium` |

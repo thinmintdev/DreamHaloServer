@@ -1,54 +1,27 @@
-# SillyTavern Extension for Dream Server
+# SillyTavern
 
-## Overview
+Character and roleplay chat UI that connects to local LLMs. Create characters, manage conversations, and run immersive chat experiences with Dream Server's local models.
 
-SillyTavern is a character/roleplay chat UI that connects to local LLMs. This extension provides a dedicated instance integrated with Dream Server's stack.
+## Requirements
 
-## Features
+- **GPU:** NVIDIA, AMD, or Apple Silicon
+- **Dependencies:** None
 
-- Runs SillyTavern with local LLM integration
-- GPU acceleration (NVIDIA/AMD)
-- Persistent storage for character files and conversations
-- Health endpoint at `/`
-
-## Usage
-
-### Enable the extension
+## Enable / Disable
 
 ```bash
-dream extensions enable sillytavern
+dream enable sillytavern
+dream disable sillytavern
 ```
 
-### Access the UI
+Your data is preserved when disabling. To re-enable later: `dream enable sillytavern`
 
-```
-http://localhost:${SILLYTAVERN_PORT:-8080}
-```
+## Access
 
-### Configure
+- **URL:** `http://localhost:8001`
 
-Edit `.env`:
+## First-Time Setup
 
-```
-SILLYTAVERN_API_URL=http://llama-server:8080/v1
-```
-
-Restart to apply:
-
-```bash
-docker compose down sillytavern && docker compose up -d sillytavern
-```
-
-## Integration
-
-SillyTavern works with:
-- **llama-server** — Primary LLM backend
-- **n8n workflows** — Trigger roleplay sessions via webhook
-
-## Uninstall
-
-```bash
-dream extensions disable sillytavern
-```
-
-Character files in `./data/sillytavern/` are preserved.
+1. Enable the service: `dream enable sillytavern`
+2. Open `http://localhost:8001`
+3. Connect to Dream Server's LLM by setting the API URL to `http://llama-server:8080/v1` in the connection settings

@@ -1,30 +1,30 @@
-# Frigate Extension
+# Frigate
 
-AI-powered Network Video Recorder (NVR) with real-time object detection.
-
-## Overview
-
-Frigate is an open-source NVR designed for Home Assistant with AI object
-detection. It processes video streams locally using AI to detect people,
-vehicles, and other objects without sending your video to the cloud.
-
-## Features
-
-- **Real-time object detection** — AI detection running locally on your hardware
-- **Event recording** — Save clips when objects are detected
-- **RTSP/WebRTC restreaming** — Rebroadcast camera feeds
-- **Low false positive rate** — AI-based detection reduces false alerts
-- **Home Assistant integration** — Native integration available
+Open-source NVR (Network Video Recorder) with real-time local AI object detection for IP cameras. Detect people, vehicles, and other objects without sending video to the cloud.
 
 ## Requirements
 
-- IP cameras with RTSP streams
-- NVIDIA GPU recommended for object detection (512MB+ VRAM)
-- Storage for recordings (varies based on retention)
+- **GPU:** NVIDIA (min 1 GB VRAM for object detection)
+- **Dependencies:** None
+- IP cameras with RTSP streams required
 
-## Configuration
+## Enable / Disable
 
-Create a `config.yml` in `./data/frigate/config/` before starting:
+```bash
+dream enable frigate
+dream disable frigate
+```
+
+Your data is preserved when disabling. To re-enable later: `dream enable frigate`
+
+## Access
+
+- **URL:** `http://localhost:8971`
+
+## First-Time Setup
+
+1. Enable the service: `dream enable frigate`
+2. Create a `config.yml` in `./data/frigate/config/` with your camera configuration:
 
 ```yaml
 mqtt:
@@ -43,50 +43,19 @@ cameras:
       width: 1920
       height: 1080
       fps: 5
-
-# Optional: Enable AI object detection
-detectors:
-  tensorrt:
-    type: tensorrt
-    device: gpu
-
-model:
-  path: /config/model_cache/tensorrt/yolov7-320.trt
-  input_tensor: nchw
-  input_pixel_format: rgb
-  width: 320
-  height: 320
 ```
 
-## Ports
+3. Open `http://localhost:8971` to view camera feeds and detections
+
+### Additional Ports
 
 | Port | Description |
 |------|-------------|
-| 8971 | Web UI and API (external) |
 | 8554 | RTSP restreaming |
 | 8555 | WebRTC (TCP/UDP) |
 
-## Data Storage
+## Configuration
 
-- `./data/frigate/config/` — Configuration and database
-- `./data/frigate/storage/` — Recordings and clips
-- `/tmp/cache` — In-memory cache (tmpfs)
-
-## GPU Support
-
-NVIDIA GPUs are supported for accelerated object detection. The extension
-includes GPU reservation in compose.yaml.
-
-## Health Check
-
-The health endpoint is `/api/version` on the internal port 5000.
-
-## Security
-
-- Runs with `no-new-privileges:true`
-- Internal API on port 5000 is not exposed externally
-- RTSP streams are unauthenticated by default (configure in go2rtc section)
-
-## Documentation
-
-Full documentation: https://docs.frigate.video
+| Variable | Description | Default |
+|----------|------------|---------|
+| `FRIGATE_RTSP_PASSWORD` | RTSP password for camera streams | _(required)_ |
