@@ -256,7 +256,10 @@ create_manifest() {
     local backup_type="$2"
     local description="${3:-}"
     local version
-    version=$(cat "$DREAM_DIR/.version" 2>/dev/null || echo "unknown")
+    # .version is a JSON file written by dream-update.sh; extract the version
+    # string rather than embedding the entire JSON blob (see get_current_version
+    # in dream-update.sh for the canonical reader).
+    version=$(jq -r '.version // "unknown"' "$DREAM_DIR/.version" 2>/dev/null || echo "unknown")
 
     # Use jq to safely construct JSON (prevents injection via $description)
     local has_user_data="false" has_config="false" has_cache="false"
