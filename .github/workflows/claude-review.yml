@@ -52,12 +52,26 @@ jobs:
     steps:
       - name: Check if fork PR
         id: fork_check
+        env:
+          HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
-          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-            echo "is_fork=true" >> $GITHUB_OUTPUT
+          IS_FORK="false"
+
+          # For pull_request events, check head repo
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              IS_FORK="true"
+            fi
+          fi
+
+          # For issue_comment events, API key absence signals fork PR
+          if [ "${{ github.event_name }}" == "issue_comment" ] && [ "$HAS_API_KEY" != "true" ]; then
+            IS_FORK="true"
+          fi
+
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          if [ "$IS_FORK" == "true" ]; then
             echo "::notice::Fork PR detected — skipping AI review (no API key available)"
-          else
-            echo "is_fork=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout code
