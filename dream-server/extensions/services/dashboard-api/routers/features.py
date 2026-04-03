@@ -62,6 +62,11 @@ def calculate_feature_status(feature: dict, services: list, gpu_info: Optional[G
     )
     is_enabled = enabled_all_ok and enabled_any_ok
 
+    # A running feature already occupies VRAM — report it as fitting
+    # when total VRAM meets the requirement, not just free VRAM.
+    if is_enabled:
+        vram_fits = vram_ok
+
     if is_enabled:
         status = "enabled"
     elif not vram_ok:
