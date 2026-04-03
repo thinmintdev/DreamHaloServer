@@ -75,6 +75,11 @@ if [[ "$ENABLE_COMFYUI" == "true" ]]; then
     dream_progress 93 "health" "Waiting for Image generation"
     _check_health "ComfyUI" "http://localhost:${SERVICE_PORTS[comfyui]:-8188}${SERVICE_HEALTH[comfyui]:-/}" 150 15
 fi
+# Embeddings (TEI): model load on first run can take 1-2 minutes after start_period
+if [[ "$ENABLE_RAG" == "true" ]]; then
+    dream_progress 94 "health" "Waiting for Embeddings"
+    _check_health "embeddings" "http://localhost:${SERVICE_PORTS[embeddings]:-7860}${SERVICE_HEALTH[embeddings]:-/health}" 30 10
+fi
 
 # Perplexica auto-config: seed chat model + embedding model on first boot.
 # The slim-latest image stores config in a database, not just config.json.

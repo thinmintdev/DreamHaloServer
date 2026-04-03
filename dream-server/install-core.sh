@@ -198,4 +198,11 @@ INSTALL_PHASE="09-offline";      source "$SCRIPT_DIR/installers/phases/09-offlin
 INSTALL_PHASE="10-amd-tuning";   source "$SCRIPT_DIR/installers/phases/10-amd-tuning.sh"
 INSTALL_PHASE="11-services";     source "$SCRIPT_DIR/installers/phases/11-services.sh"
 INSTALL_PHASE="12-health";       source "$SCRIPT_DIR/installers/phases/12-health.sh"
-INSTALL_PHASE="13-summary";      source "$SCRIPT_DIR/installers/phases/13-summary.sh"
+# Phase 13 is informational (URLs, shortcuts, preflight). It must never fail
+# the install — any error here is cosmetic. Run with set +e to prevent
+# stray non-zero exit codes (e.g., a crashing privacy-shield health probe)
+# from triggering the cleanup_on_error trap.
+INSTALL_PHASE="13-summary"
+set +e
+source "$SCRIPT_DIR/installers/phases/13-summary.sh"
+set -e

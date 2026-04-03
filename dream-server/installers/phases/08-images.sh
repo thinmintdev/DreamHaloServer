@@ -16,7 +16,11 @@
 # ============================================================================
 
 dream_progress 48 "images" "Downloading container images"
-show_phase 4 6 "Downloading Modules" "~5-10 minutes"
+if [[ "$GPU_BACKEND" == "nvidia" && "${ENABLE_COMFYUI:-}" == "true" ]]; then
+    show_phase 4 6 "Downloading Modules" "~5-10 min + ~30 min ComfyUI build"
+else
+    show_phase 4 6 "Downloading Modules" "~5-10 minutes"
+fi
 
 # Build image list with cinematic labels
 # Format: "image|friendly_name"
@@ -70,7 +74,8 @@ else
         dream_progress "$_img_pct" "images" "Pulling image $pull_count/$pull_total"
 
         if ! pull_with_progress "$img" "$label" "$pull_count" "$pull_total"; then
-            ai_warn "Failed to pull $img — will retry on next start"
+            ai_warn "Failed to pull $img — will attempt again during service startup"
+            ai "  If this persists, check your network connection and disk space"
             pull_failed=$((pull_failed + 1))
         fi
     done
