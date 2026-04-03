@@ -81,6 +81,7 @@ function Write-DreamComposeDiagnostics {
         Write-Host ""
 
         $envArgs = Get-DreamComposeEnvFileArgs -InstallDir $InstallDir
+        Write-AIWarn "Output below may include substituted .env values (secrets). Redact before posting publicly."
         Write-Host "  --- docker compose ... config (last 55 lines) ---" -ForegroundColor DarkGray
         $cfgOut = & docker compose @ComposeFlags @envArgs config 2>&1 | ForEach-Object { $_.ToString() }
         if ($cfgOut) {

@@ -140,6 +140,9 @@ function Write-DreamInstallReport {
     $lines += "Dream Server Windows Report"
     $lines += "Generated: $($report.generated_at)"
     $lines += ""
+    $lines += "Privacy"
+    $lines += "- docker compose config output (inside report.json) can include interpolated env values from .env — API keys, tokens, or other secrets. Review and redact before sharing publicly."
+    $lines += ""
     $lines += "Platform"
     $lines += "- OS: $($report.platform.os_caption) ($($report.platform.os_version), build $($report.platform.os_build))"
     $lines += "- Machine: $($report.platform.computer_name)"
@@ -173,6 +176,7 @@ function Write-DreamInstallReport {
     Write-AISuccess "Report generated:"
     Write-AI "  JSON: $jsonPath"
     Write-AI "  Text: $txtPath"
+    Write-AIWarn "compose config in report.json may contain secrets from .env — review before sharing."
     Write-AI "Attach report.json when filing Windows install/runtime issues."
 
     return @{

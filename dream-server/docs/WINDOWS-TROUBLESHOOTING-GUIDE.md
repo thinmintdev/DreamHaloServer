@@ -24,7 +24,7 @@ What the diagnostics include (in order):
 
 1. **`docker version`** — confirms the Docker client can talk to the engine.
 2. **`docker info`** (first lines) — daemon state, WSL2, disk, etc.
-3. **`docker compose … config`** (last lines of output) — merged compose after variable substitution (uses `.env` when present). If there is a YAML merge or syntax error, it often appears here.
+3. **`docker compose … config`** (last lines of output) — merged compose after variable substitution (uses `.env` when present). **This output can contain secret values** (API keys, tokens); redact before pasting into public GitHub issues. If there is a YAML merge or syntax error, it often appears here.
 4. **`docker compose … ps -a`** — which containers exist and their state.
 
 **Things to check on your machine before re-running:**
@@ -52,7 +52,10 @@ This creates:
 - `artifacts/windows-report/report.txt` (human-readable summary)
 
 The report includes platform/GPU basics, compose flags, `docker version`, `docker info`, `docker compose ... config`, `docker compose ... ps -a`, and key local health checks.
-Attach `report.json` to GitHub issues or Discord support threads.
+
+**Privacy:** `docker compose config` in the bundle can interpolate values from `.env` (including API keys and other secrets). Open `report.json`, search for sensitive strings, and redact or replace them before attaching to **public** GitHub issues. Discord or private support channels may still need care if you paste large excerpts.
+
+Attach `report.json` to GitHub issues or Discord support threads after review.
 
 ---
 
