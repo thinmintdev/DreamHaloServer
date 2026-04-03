@@ -110,6 +110,7 @@ def load_extension_manifests(
                     "name": service.get("name", service_id),
                     "ui_path": service.get("ui_path", "/"),
                     **({"type": service["type"]} if "type" in service else {}),
+                    **({"health_port": int(service["health_port"])} if "health_port" in service else {}),
                 }
 
             manifest_features = manifest.get("features", [])

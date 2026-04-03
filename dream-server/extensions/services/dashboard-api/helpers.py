@@ -205,7 +205,8 @@ async def check_service_health(service_id: str, config: dict) -> ServiceStatus:
         )
 
     host = config.get('host', 'localhost')
-    url = f"http://{host}:{config['port']}{config['health']}"
+    health_port = config.get('health_port', config['port'])
+    url = f"http://{host}:{health_port}{config['health']}"
     status = "unknown"
     response_time = None
 
@@ -239,7 +240,8 @@ async def _check_host_service_health(service_id: str, config: dict) -> ServiceSt
     """Check health of a host-level service via HTTP."""
     port = config.get("external_port", config["port"])
     host = os.environ.get("HOST_GATEWAY", "host.docker.internal")
-    url = f"http://{host}:{port}{config['health']}"
+    health_port = config.get('health_port', port)
+    url = f"http://{host}:{health_port}{config['health']}"
     status = "down"
     response_time = None
     try:
