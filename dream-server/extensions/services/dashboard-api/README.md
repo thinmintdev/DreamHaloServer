@@ -123,6 +123,20 @@ Environment variables (set in `.env`):
 | `GET` | `/api/releases/manifest` | No | Recent release history from GitHub |
 | `POST` | `/api/update` | Yes | Trigger update actions (`check`, `backup`, `update`) |
 
+### Extensions
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/extensions/catalog` | Yes | Browse extension catalog with status, filterable by `category` and `gpu_compatible` query params |
+| `GET` | `/api/extensions/{service_id}` | Yes | Detailed info for a single extension (manifest, features, env vars, setup instructions) |
+| `POST` | `/api/extensions/{service_id}/install` | Yes | Install an extension from the extensions library into user-extensions |
+| `POST` | `/api/extensions/{service_id}/enable` | Yes | Enable a disabled extension (renames `compose.yaml.disabled` to `compose.yaml`, starts container via host agent) |
+| `POST` | `/api/extensions/{service_id}/disable` | Yes | Disable an enabled extension (stops container via host agent, renames `compose.yaml` to `compose.yaml.disabled`) |
+| `DELETE` | `/api/extensions/{service_id}` | Yes | Uninstall a disabled extension (removes its directory from user-extensions) |
+| `POST` | `/api/extensions/{service_id}/logs` | Yes | Fetch container logs via the host agent (last 100 lines) |
+
+Core services cannot be installed, enabled, disabled, or uninstalled via these endpoints (returns 403). The catalog endpoint also reports whether the [host agent](../../docs/HOST-AGENT-API.md) is available (`agent_available` field).
+
 ## Authentication
 
 When `DASHBOARD_API_KEY` is set in `.env`, all authenticated endpoints require the key:
@@ -150,7 +164,8 @@ Dashboard API (:3002)
        ├── setup.py ─────────── Setup wizard + persona system
        ├── updates.py ──────── GitHub releases + dream-update.sh
        ├── agents.py ───────── Agent session + throughput metrics
-       └── privacy.py ──────── Privacy Shield container control
+       ├── privacy.py ──────── Privacy Shield container control
+       └── extensions.py ───── Extension catalog, install, enable/disable, logs
 ```
 
 ## Files
@@ -162,7 +177,7 @@ Dashboard API (:3002)
 - `gpu.py` — GPU detection for NVIDIA and AMD
 - `helpers.py` — Service health checks, LLM metrics, system metrics
 - `agent_monitor.py` — Background agent metrics collection
-- `routers/` — Endpoint modules (workflows, features, setup, updates, agents, privacy)
+- `routers/` — Endpoint modules (workflows, features, setup, updates, agents, privacy, extensions)
 - `Dockerfile` — Container definition
 - `requirements.txt` — Python dependencies
 
