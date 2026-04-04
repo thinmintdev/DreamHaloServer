@@ -24,6 +24,19 @@ if $DRY_RUN; then
     log "[DRY RUN] Would start services: $DOCKER_COMPOSE_CMD $COMPOSE_FLAGS up -d"
 else
     cd "$INSTALL_DIR" || exit 1
+
+    # Re-resolve compose flags against the actual install directory.
+    # Phase 03 may have disabled services (e.g., ComfyUI on Tier 0) after
+    # COMPOSE_FLAGS was first set in Phase 02, making the cached value stale.
+    if [[ -x "$INSTALL_DIR/scripts/resolve-compose-stack.sh" ]]; then
+        _refreshed_flags=$("$INSTALL_DIR/scripts/resolve-compose-stack.sh" \
+            --script-dir "$INSTALL_DIR" --tier "${TIER:-1}" --gpu-backend "${GPU_BACKEND:-nvidia}" 2>/dev/null) || true
+        if [[ -n "$_refreshed_flags" ]]; then
+            COMPOSE_FLAGS="$_refreshed_flags"
+            log "Compose flags refreshed from install directory"
+        fi
+    fi
+
     # Convert COMPOSE_FLAGS string to array for safe word-splitting
     read -ra COMPOSE_FLAGS_ARR <<< "$COMPOSE_FLAGS"
     mkdir -p "$INSTALL_DIR/logs"
