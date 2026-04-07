@@ -1,0 +1,44 @@
+services:
+  proxmox-mcp:
+    build:
+      context: https://github.com/RekklesNA/ProxmoxMCP-Plus.git
+      dockerfile: Dockerfile
+    container_name: dream-proxmox-mcp
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["exec /app/.venv/bin/python -m proxmox_mcp.server"]
+    environment:
+      - PROXMOX_HOST=${PROXMOX_HOST:-10.0.1.110}
+      - PROXMOX_PORT=${PROXMOX_PORT:-8006}
+      - PROXMOX_USER=${PROXMOX_USER:-root@pam}
+      - PROXMOX_TOKEN_NAME=${PROXMOX_TOKEN_NAME:?Set PROXMOX_TOKEN_NAME in .env}
+      - PROXMOX_TOKEN_VALUE=${PROXMOX_TOKEN_VALUE:?Set PROXMOX_TOKEN_VALUE in .env}
+      - PROXMOX_VERIFY_SSL=false
+      - PROXMOX_SERVICE=PVE
+      - PROXMOX_MCP_CONFIG=/app/proxmox-config/config.json
+      - API_HOST=0.0.0.0
+      - API_PORT=8811
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../../../config/proxmox-mcp:/app/proxmox-config:ro
+    ports:
+      - "127.0.0.1:8811:8811"
+    extra_hosts:
+      - "proxmox:10.0.1.110"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - dream-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8811/sse || exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  dream-network:
+    external: true

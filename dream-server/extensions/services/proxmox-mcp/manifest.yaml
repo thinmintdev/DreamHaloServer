@@ -1,0 +1,12 @@
+id: proxmox-mcp
+name: Proxmox MCP
+description: MCP server for Proxmox VE management (ProxmoxMCP-Plus)
+category: automation
+port: 8811
+health: /health
+container: dream-proxmox-mcp
+aliases:
+  - proxmox-mcp
+  - pve-mcp
+feature_flags:
+  - mcp

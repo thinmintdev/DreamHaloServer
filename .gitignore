@@ -63,6 +63,16 @@ dream-server/tests/__pycache__/
 dream-server/internal/
 dream-server/.cache/
 
+# OpenClaw workspace personal data (memories, identity, SSH, credentials)
+dream-server/config/openclaw/**/ssh/
+dream-server/config/openclaw/**/memory/
+dream-server/config/openclaw/**/config/mcporter.json
+dream-server/config/openclaw/workspace*/*.md
+!dream-server/config/openclaw/workspace*/skills/**
+
+# Proxmox MCP credentials
+dream-server/config/proxmox-mcp/config.json
+
 # ============================================
 # Archived / deprecated code (pre-v2.0)
 # ============================================
