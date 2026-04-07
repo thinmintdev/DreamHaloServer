@@ -3,11 +3,13 @@ services:
     image: ghcr.io/openclaw/openclaw:2026.3.8
     container_name: dream-openclaw
     restart: unless-stopped
+    user: root
     security_opt:
-      - no-new-privileges:true
+      - seccomp:unconfined
     environment:
-      - OPENCLAW_CONFIG=/config/openclaw-strix-halo.json
-      # DreamHalo mode (Claude via 9Router): set OPENCLAW_CONFIG=/config/openclaw-dreamhalo.json
+      - HOME=/home/node
+      - PLAYWRIGHT_CHROMIUM_SANDBOX=false
+      - OPENCLAW_CONFIG=/config/openclaw-dreamhalo.json
       - OPENCLAW_DATA=/data
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_TOKEN:?Set OPENCLAW_TOKEN in .env}
       - OPENCLAW_GATEWAY_PASSWORD=${OPENCLAW_GATEWAY_PASSWORD:-dreamhalo}
@@ -23,12 +25,13 @@ services:
       - WHISPER_URL=http://whisper:8000
       - KOKORO_URL=http://tts:8880
       - COMFYUI_URL=http://comfyui:8188
-    entrypoint: ["/bin/sh", "-c", "node /config/inject-token.js; export OPENCLAW_CONFIG=/tmp/openclaw-config.json; exec docker-entrypoint.sh node openclaw.mjs gateway --allow-unconfigured --bind lan"]
+    entrypoint: ["/bin/sh", "-c", "/config/install-browser.sh; node /config/inject-token.js; export OPENCLAW_CONFIG=/tmp/openclaw-config.json; exec docker-entrypoint.sh node openclaw.mjs gateway --allow-unconfigured --bind lan"]
     volumes:
       - ./config/openclaw:/config:ro
       - ./data/openclaw:/data
       - ./data/openclaw/home:/home/node/.openclaw
       - ./config/openclaw/workspace:/home/node/.openclaw/workspace
+      - ./data/openclaw/playwright:/home/node/.cache/ms-playwright
     ports:
       - "0.0.0.0:${OPENCLAW_PORT:-7860}:18789"
     deploy:

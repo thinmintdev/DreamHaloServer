@@ -49,6 +49,12 @@ model_list:
       api_base: http://llama-server:8080/v1
       api_key: not-needed
 
+  - model_name: kappa-20b
+    litellm_params:
+      model: openai/extra.kappa-20b
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
   - model_name: devstral-small
     litellm_params:
       model: openai/extra.Devstral-Small-2507-Q4_K_M.gguf

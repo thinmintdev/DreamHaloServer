@@ -79,10 +79,22 @@ try {
         console.log('[inject-token] synced model providers from primary config');
       }
 
+      // Replace __LITELLM_KEY__ placeholders with actual key
+      const litellmKey = process.env.LITELLM_KEY || '';
+      if (litellmKey) {
+        const configStr = JSON.stringify(config.models.providers);
+        config.models.providers = JSON.parse(configStr.replace(/__LITELLM_KEY__/g, litellmKey));
+      }
+
       // Sync agent defaults from primary config
       if (primary.agents?.defaults) {
         config.agents = config.agents || {};
         config.agents.defaults = JSON.parse(JSON.stringify(primary.agents.defaults));
+        // Replace __LITELLM_KEY__ in agent defaults (memorySearch etc.)
+        if (litellmKey) {
+          const defaultsStr = JSON.stringify(config.agents.defaults);
+          config.agents.defaults = JSON.parse(defaultsStr.replace(/__LITELLM_KEY__/g, litellmKey));
+        }
         console.log('[inject-token] synced agent defaults from primary config');
       }
     } catch (err) {

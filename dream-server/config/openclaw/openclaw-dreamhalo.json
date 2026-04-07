@@ -6,17 +6,18 @@
         "baseUrl": "http://litellm:4000/v1",
         "apiKey": "__LITELLM_KEY__",
         "models": [
-          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "contextWindow": 200000 },
-          { "id": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "contextWindow": 200000 },
-          { "id": "claude-opus-4-6", "name": "Claude Opus 4.6", "contextWindow": 200000 },
-          { "id": "qwen3-coder-next", "name": "Qwen3 Coder Next (local)", "contextWindow": 131072 },
-          { "id": "qwen3.5-35b-a3b", "name": "Qwen3.5 35B A3B (local)", "contextWindow": 131072 },
-          { "id": "glm-4.7-flash", "name": "GLM 4.7 Flash (local)", "contextWindow": 131072 },
-          { "id": "nemotron-3-nano", "name": "Nemotron 3 Nano (local)", "contextWindow": 131072 },
-          { "id": "devstral-small", "name": "Devstral Small (local)", "contextWindow": 131072 },
-          { "id": "gpt-oss-20b", "name": "GPT-OSS 20B (local)", "contextWindow": 131072 },
-          { "id": "local", "name": "Local Default", "contextWindow": 131072 },
-          { "id": "default", "name": "Default (Sonnet)", "contextWindow": 200000 }
+          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "contextWindow": 200000, "api": "openai-completions"},
+          { "id": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "contextWindow": 200000, "api": "openai-completions"},
+          { "id": "claude-opus-4-6", "name": "Claude Opus 4.6", "contextWindow": 200000, "api": "openai-completions"},
+          { "id": "qwen3-coder-next", "name": "Qwen3 Coder Next (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "qwen3.5-35b-a3b", "name": "Qwen3.5 35B A3B (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "glm-4.7-flash", "name": "GLM 4.7 Flash (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "nemotron-3-nano", "name": "Nemotron 3 Nano (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "devstral-small", "name": "Devstral Small (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "gpt-oss-20b", "name": "GPT-OSS 20B (local)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "kappa-20b", "name": "Kappa 20B (neutral_good)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "local", "name": "Local Default", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "default", "name": "Default (Sonnet)", "contextWindow": 200000, "api": "openai-completions"}
         ]
       }
     }
@@ -36,12 +37,63 @@
         "litellm/nemotron-3-nano": {},
         "litellm/devstral-small": {},
         "litellm/gpt-oss-20b": {},
+        "litellm/kappa-20b": {},
         "litellm/local": {},
         "litellm/default": {}
       },
       "subagents": {
         "model": "litellm/qwen3-coder-next",
         "maxConcurrent": 20
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "model": "litellm/qwen3-coder-next",
+        "reserveTokens": 8192,
+        "reserveTokensFloor": 4096,
+        "keepRecentTokens": 16384,
+        "maxHistoryShare": 0.7,
+        "recentTurnsPreserve": 4,
+        "identifierPolicy": "strict",
+        "qualityGuard": {
+          "enabled": true,
+          "maxRetries": 2
+        },
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 8000,
+          "forceFlushTranscriptBytes": "512KB"
+        }
+      },
+      "memorySearch": {
+        "enabled": true,
+        "provider": "openai",
+        "model": "BAAI/bge-base-en-v1.5",
+        "remote": {
+          "baseUrl": "http://embeddings:80/v1",
+          "apiKey": "not-needed"
+        },
+        "sources": ["memory"],
+        "experimental": {
+          "sessionMemory": true
+        },
+        "store": {
+          "vector": {
+            "enabled": true
+          }
+        },
+        "query": {
+          "maxResults": 10,
+          "hybrid": {
+            "enabled": true,
+            "vectorWeight": 0.7,
+            "textWeight": 0.3
+          }
+        },
+        "sync": {
+          "onSessionStart": true,
+          "onSearch": true,
+          "watch": true
+        }
       }
     }
   },
@@ -56,7 +108,8 @@
     "web_fetch": { "enabled": true },
     "browser": {
       "enabled": true,
-      "headless": true
+      "headless": true,
+      "chromiumSandbox": false
     },
     "web": {
       "search": {
