@@ -161,7 +161,8 @@ while [[ $# -gt 0 ]]; do
         --openclaw) ENABLE_OPENCLAW=true; shift ;;
         --comfyui) ENABLE_COMFYUI=true; shift ;;
         --no-comfyui) ENABLE_COMFYUI=false; shift ;;
-        --all) ENABLE_VOICE=true; ENABLE_WORKFLOWS=true; ENABLE_RAG=true; ENABLE_OPENCLAW=true; ENABLE_COMFYUI=true; shift ;;
+        --all) ENABLE_VOICE=true; ENABLE_WORKFLOWS=true; ENABLE_RAG=true; ENABLE_OPENCLAW=true; ENABLE_COMFYUI=true; ENABLE_9ROUTER=true; ENABLE_MODEL_MANAGER=true; ENABLE_UNSLOTH=true; shift ;;
+        --dreamhalo) ENABLE_9ROUTER=true; ENABLE_MODEL_MANAGER=true; ENABLE_UNSLOTH=true; shift ;;
         --non-interactive) INTERACTIVE=false; shift ;;
         --offline) OFFLINE_MODE=true; shift ;;
         --no-bootstrap) NO_BOOTSTRAP=true; shift ;;
@@ -205,4 +206,9 @@ INSTALL_PHASE="12-health";       source "$SCRIPT_DIR/installers/phases/12-health
 INSTALL_PHASE="13-summary"
 set +e
 source "$SCRIPT_DIR/installers/phases/13-summary.sh"
+set -e
+
+INSTALL_PHASE="14-dreamhalo"
+set +e
+source "$SCRIPT_DIR/installers/phases/14-dreamhalo.sh"
 set -e
