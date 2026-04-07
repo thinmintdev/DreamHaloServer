@@ -122,6 +122,24 @@
       }
     }
   },
+  "channels": {
+    "telegram": {
+      "botToken": "__TELEGRAM_BOT_TOKEN__",
+      "dmPolicy": "allowlist",
+      "allowFrom": ["8382890357"],
+      "streaming": "partial",
+      "commands": {
+        "native": "auto",
+        "nativeSkills": "auto"
+      }
+    },
+    "defaults": {
+      "heartbeat": {
+        "showAlerts": true,
+        "showOk": false
+      }
+    }
+  },
   "gateway": {
     "host": "0.0.0.0",
     "port": 7860,

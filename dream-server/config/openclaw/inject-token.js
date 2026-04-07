@@ -97,6 +97,18 @@ try {
         }
         console.log('[inject-token] synced agent defaults from primary config');
       }
+
+      // Sync channels config from primary config
+      if (primary.channels) {
+        config.channels = JSON.parse(JSON.stringify(primary.channels));
+        // Replace __TELEGRAM_BOT_TOKEN__ with env value
+        const telegramToken = process.env.TELEGRAM_BOT_TOKEN || '';
+        if (telegramToken && config.channels.telegram) {
+          config.channels.telegram.botToken = telegramToken;
+          console.log('[inject-token] set Telegram bot token from env');
+        }
+        console.log('[inject-token] synced channels config from primary config');
+      }
     } catch (err) {
       console.error('[inject-token] primary config sync warning:', err.message);
     }

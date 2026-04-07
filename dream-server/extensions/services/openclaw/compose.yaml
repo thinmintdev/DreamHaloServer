@@ -19,6 +19,7 @@ services:
       - OPENCLAW_LLM_URL=${OPENCLAW_LLM_URL:-}
       - OPENCLAW_HTTP_API=${OPENCLAW_HTTP_API:-}
       - LITELLM_KEY=${LITELLM_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - SEARXNG_BASE_URL=http://searxng:8080
       - QDRANT_URL=http://qdrant:6333
       - PERPLEXICA_URL=http://perplexica:3000
