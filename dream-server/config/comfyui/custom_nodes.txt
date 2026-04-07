@@ -1,0 +1,33 @@
+# ComfyUI Custom Nodes
+# One Git repository URL per line.
+# Install with: ComfyUI Manager → Install via Git URL, or clone into
+#   data/comfyui/ComfyUI/custom_nodes/
+
+# ── Essential / UI ──────────────────────────────────────────────────
+# ComfyUI Manager — node/extension manager (install this first)
+https://github.com/ltdrdata/ComfyUI-Manager
+
+# ── Workflow Utilities ───────────────────────────────────────────────
+# Impact Pack — detailers, pipe nodes, wildcard prompts
+https://github.com/ltdrdata/ComfyUI-Impact-Pack
+
+# Efficiency Nodes — streamlined KSampler wrappers, stack loaders
+https://github.com/jags111/efficiency-nodes-comfyui
+
+# WAS Node Suite — file I/O, image filters, latent utils
+https://github.com/WASasquatch/was-node-suite-comfyui
+
+# ── Image / Upscaling ───────────────────────────────────────────────
+# Ultimate SD Upscale — tiled upscaling for VRAM-limited hardware
+https://github.com/ssitu/ComfyUI_UltimateSDUpscale
+
+# ── ControlNet / IPAdapter ───────────────────────────────────────────
+# ComfyUI ControlNet Aux — preprocessors for ControlNet
+https://github.com/Fannovel16/comfyui_controlnet_aux
+
+# IPAdapter Plus — style/face transfer via IPAdapter
+https://github.com/cubiq/ComfyUI_IPAdapter_plus
+
+# ── AMD / ROCm Performance ───────────────────────────────────────────
+# No AMD-specific nodes needed; ROCm support is handled at the image
+# level (ignatberesnev/comfyui-gfx1151 or kyuz0/amd-strix-halo-comfyui-toolboxes).

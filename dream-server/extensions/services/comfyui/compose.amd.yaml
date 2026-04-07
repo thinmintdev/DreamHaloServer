@@ -1,5 +1,8 @@
 services:
   comfyui:
+    # Community AMD/ROCm image optimized for Strix Halo (gfx1151).
+    # Alternative: kyuz0/amd-strix-halo-comfyui-toolboxes provides a pre-built
+    # community image with extra toolboxes for AMD Strix Halo hardware.
     image: ignatberesnev/comfyui-gfx1151:v0.2
     container_name: dream-comfyui
     restart: unless-stopped
@@ -9,9 +12,11 @@ services:
     group_add:
       - "${VIDEO_GID:-44}"
       - "${RENDER_GID:-992}"
+    cap_add:
+      - SYS_PTRACE
     security_opt:
-      - no-new-privileges:true
-    shm_size: 8g
+      - seccomp:unconfined
+    shm_size: '8g'
     environment:
       - HSA_OVERRIDE_GFX_VERSION=11.5.1
       - PYTORCH_TUNABLEOP_ENABLED=1
@@ -19,7 +24,7 @@ services:
     volumes:
       - ./data/comfyui/ComfyUI:/opt/ComfyUI
     ports:
-      - "127.0.0.1:${COMFYUI_PORT:-8188}:8188"
+      - "0.0.0.0:${COMFYUI_PORT:-8188}:8188"
     command: >-
       /bin/sh -c "/opt/comfyui-gfx1151-utils/check-comfyui.sh &&
       python3 /opt/ComfyUI/main.py --listen 0.0.0.0 --use-flash-attention"
