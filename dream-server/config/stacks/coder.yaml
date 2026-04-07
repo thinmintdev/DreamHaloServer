@@ -1,0 +1,16 @@
+name: coder
+description: "Heavyweight coding + lightweight utility"
+
+models:
+  primary:
+    name: qwen3-coder-next
+    lemonade_id: extra.Qwen3-Coder-Next-MXFP4_MOE.gguf
+    vram_gb: 46
+  utility:
+    name: qwen3.5-4b
+    lemonade_id: extra.Qwen3.5-4B-UD-Q4_K_XL.gguf
+    vram_gb: 3
+
+lemonade:
+  max_loaded_models: 3
+  ctx_size: 131072

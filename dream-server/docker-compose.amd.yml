@@ -11,24 +11,31 @@ services:
       context: ./extensions/services/llama-server
       dockerfile: Dockerfile.amd
     image: dream-lemonade-server:latest
-    entrypoint: ["/opt/lemonade/lemonade-server"]
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - serve
-      - --port
-      - "8080"
-      - --host
-      - "0.0.0.0"
-      - --no-tray
-      - --llamacpp
-      - rocm
-      - --llamacpp-args
-      - "--metrics --host 0.0.0.0"
-      - --extra-models-dir
-      - /models
+      - |
+        # Register embedding/reranker models with correct type labels (idempotent)
+        if [ -f /models/nomic-embed-text-v1.5.Q8_0.gguf ]; then
+          /opt/lemonade/lemonade-server pull user.nomic-embed \
+            --checkpoint /models/nomic-embed-text-v1.5.Q8_0.gguf \
+            --recipe llamacpp --embedding 2>/dev/null || true
+        fi
+        if [ -f /models/bge-reranker-v2-m3-q8_0.gguf ]; then
+          /opt/lemonade/lemonade-server pull user.bge-reranker \
+            --checkpoint /models/bge-reranker-v2-m3-q8_0.gguf \
+            --recipe llamacpp --reranking 2>/dev/null || true
+        fi
+        exec /opt/lemonade/lemonade-server serve \
+          --port 8080 --host 0.0.0.0 --no-tray \
+          --llamacpp rocm \
+          --llamacpp-args "--metrics --host 0.0.0.0" \
+          --extra-models-dir /models \
+          ${LEMONADE_MAX_LOADED_MODELS:+--max-loaded-models $LEMONADE_MAX_LOADED_MODELS}
     expose:
       - "8001"
     volumes:
       - ./data/models:/models:ro
+      - /mnt/ai-models:/mnt/ai-models:ro
       - lemonade-cache:/root/.cache/huggingface
       - lemonade-llama:/opt/lemonade/llama
       - lemonade-recipe:/root/.cache/lemonade
@@ -43,6 +50,7 @@ services:
       - ROCBLAS_USE_HIPBLASLT=0
       - LEMONADE_LLAMACPP_BACKEND=rocm
       - LEMONADE_CTX_SIZE=${CTX_SIZE:-131072}
+      - LEMONADE_MAX_LOADED_MODELS=${LEMONADE_MAX_LOADED_MODELS:-}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/v1/health"]
       interval: 15s

@@ -1776,6 +1776,335 @@ EOF
 }
 
 #=============================================================================
+# Model Stack Commands
+#=============================================================================
+STACKS_DIR="${INSTALL_DIR}/config/stacks"
+
+# Parse a value from a stack YAML file by dotpath (flat schema only)
+# Usage: _stack_val <file> <key>
+# Keys: name, description, models.primary.name, models.primary.lemonade_id,
+#       models.primary.vram_gb, models.utility.name, models.utility.lemonade_id,
+#       models.utility.vram_gb, lemonade.max_loaded_models, lemonade.ctx_size
+_stack_val() {
+    local file="$1" key="$2"
+    # Flatten the YAML into dotpath=value pairs, then grep for the key
+    awk '
+        /^[a-z]/ { L0=$0; sub(/:.*/, "", L0); L1=""; L2="" }
+        /^  [a-z]/ { L1=$0; sub(/^  /, "", L1); sub(/:.*/, "", L1); L2="" }
+        /^    [a-z]/ { L2=$0; sub(/^    /, "", L2); sub(/:.*/, "", L2) }
+        /:/ && !/: *$/ {
+            val=$0; sub(/^[^:]+: */, "", val); gsub(/^"|"$/, "", val)
+            line=$0; sub(/: .*/, "", line); gsub(/^ +/, "", line)
+            if (L2 != "" && line == L2) path = L0 "." L1 "." L2
+            else if (L1 != "" && line == L1) path = L0 "." L1
+            else path = line
+            print path "=" val
+        }
+    ' "$file" | grep "^${key}=" | head -1 | cut -d= -f2-
+}
+
+# Patch the LiteLLM 'local' alias to point at the stack's primary model
+_stack_patch_litellm() {
+    local primary_lemonade_id="$1"
+    local config="${INSTALL_DIR}/config/litellm/dreamhalo.yaml"
+    [[ -f "$config" ]] || { warn "LiteLLM config not found: $config"; return 1; }
+
+    awk -v new_model="openai/$primary_lemonade_id" '
+        /^  - model_name: local$/ { in_local=1 }
+        in_local && /^  - model_name:/ && !/local$/ { in_local=0 }
+        in_local && /model: openai\// {
+            sub(/model: openai\/[^ ]+/, "model: " new_model)
+        }
+        { print }
+    ' "$config" > "${config}.tmp" && mv "${config}.tmp" "$config"
+}
+
+# Patch OpenClaw subagent + compaction model assignments
+_stack_patch_openclaw() {
+    local utility_model="$1"
+    local config="${INSTALL_DIR}/config/openclaw/openclaw-dreamhalo.json"
+    [[ -f "$config" ]] || { warn "OpenClaw config not found: $config"; return 1; }
+
+    python3 -c "
+import json
+with open('$config') as f:
+    cfg = json.load(f)
+d = cfg.get('agents', {}).get('defaults', {})
+if 'subagents' in d:
+    d['subagents']['model'] = 'litellm/$utility_model'
+if 'compaction' in d:
+    d['compaction']['model'] = 'litellm/$utility_model'
+with open('$config', 'w') as f:
+    json.dump(cfg, f, indent=2)
+    f.write('\n')
+" || warn "OpenClaw config patch failed"
+}
+
+# Register embedding/reranker models with correct type labels in Lemonade
+_stack_register_infra() {
+    local container="$1"
+    if docker exec "$container" ls /models/nomic-embed-text-v1.5.Q8_0.gguf >/dev/null 2>&1; then
+        docker exec "$container" /opt/lemonade/lemonade-server pull user.nomic-embed \
+            --checkpoint /models/nomic-embed-text-v1.5.Q8_0.gguf \
+            --recipe llamacpp --embedding 2>/dev/null || true
+    fi
+    if docker exec "$container" ls /models/bge-reranker-v2-m3-q8_0.gguf >/dev/null 2>&1; then
+        docker exec "$container" /opt/lemonade/lemonade-server pull user.bge-reranker \
+            --checkpoint /models/bge-reranker-v2-m3-q8_0.gguf \
+            --recipe llamacpp --reranking 2>/dev/null || true
+    fi
+}
+
+# Warm-load models into VRAM by requesting Lemonade load them
+_stack_warmup() {
+    local container="$1"; shift
+    local models=("$@")
+    for model_id in "${models[@]}"; do
+        log "Loading ${model_id}..."
+        # Send a minimal completion request to force Lemonade to load the model into VRAM
+        local resp
+        resp=$(docker exec "$container" curl -sf -X POST http://127.0.0.1:8080/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"${model_id}\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1}" \
+            2>&1) && log "  ✓ ${model_id} loaded" \
+                   || warn "  Failed to preload ${model_id}: ${resp}"
+    done
+}
+
+cmd_stack() {
+    check_install; cd "$INSTALL_DIR"
+    load_env
+    sr_load
+
+    local action="${1:-list}"
+    shift 2>/dev/null || true
+    local name="${1:-}"
+
+    case "$action" in
+        list|ls)
+            echo -e "${BLUE}━━━ Available Model Stacks ━━━${NC}"
+            echo ""
+            local active="${DREAM_STACK:-}"
+            if [[ ! -d "$STACKS_DIR" ]] || ! ls "$STACKS_DIR"/*.yaml >/dev/null 2>&1; then
+                warn "No stacks found in $STACKS_DIR"
+                return 0
+            fi
+            printf "  ${CYAN}%-16s %-42s %s${NC}\n" "NAME" "DESCRIPTION" "VRAM"
+            for f in "$STACKS_DIR"/*.yaml; do
+                local sname desc pv uv total marker
+                sname=$(_stack_val "$f" name)
+                desc=$(_stack_val "$f" description)
+                pv=$(_stack_val "$f" models.primary.vram_gb)
+                uv=$(_stack_val "$f" models.utility.vram_gb)
+                total=$(awk "BEGIN {printf \"%.0f\", ${pv:-0} + ${uv:-0} + 1}")
+                marker=""
+                [[ "$sname" == "$active" ]] && marker=" ${GREEN}*${NC}"
+                printf "  %-16s %-42s ~%sGB%b\n" "$sname" "$desc" "$total" "$marker"
+            done
+            echo ""
+            [[ -n "$active" ]] && echo -e "  ${GREEN}*${NC} = active stack"
+            ;;
+
+        show|info)
+            [[ -z "$name" ]] && { error "Usage: dream stack show <name>"; return 1; }
+            local file="$STACKS_DIR/${name}.yaml"
+            [[ -f "$file" ]] || { error "Stack not found: $name"; return 1; }
+
+            local desc pn pl pv un ul uv mlm ctx total
+            desc=$(_stack_val "$file" description)
+            pn=$(_stack_val "$file" models.primary.name)
+            pl=$(_stack_val "$file" models.primary.lemonade_id)
+            pv=$(_stack_val "$file" models.primary.vram_gb)
+            un=$(_stack_val "$file" models.utility.name)
+            ul=$(_stack_val "$file" models.utility.lemonade_id)
+            uv=$(_stack_val "$file" models.utility.vram_gb)
+            mlm=$(_stack_val "$file" lemonade.max_loaded_models)
+            ctx=$(_stack_val "$file" lemonade.ctx_size)
+            total=$(awk "BEGIN {printf \"%.0f\", ${pv:-0} + ${uv:-0} + 1}")
+
+            echo -e "${BLUE}━━━ Stack: ${name} ━━━${NC}"
+            echo ""
+            echo -e "  ${CYAN}Description:${NC}  $desc"
+            echo ""
+            echo -e "  ${CYAN}Primary model:${NC}"
+            echo -e "    Name:         $pn"
+            echo -e "    Lemonade ID:  $pl"
+            echo -e "    VRAM:         ~${pv}GB"
+            echo ""
+            echo -e "  ${CYAN}Utility model:${NC}"
+            echo -e "    Name:         $un"
+            echo -e "    Lemonade ID:  $ul"
+            echo -e "    VRAM:         ~${uv}GB"
+            echo ""
+            echo -e "  ${CYAN}Settings:${NC}"
+            echo -e "    Max loaded (per type): $mlm"
+            echo -e "    Context size:          $ctx"
+            echo ""
+            echo -e "  ${CYAN}VRAM budget:${NC}  ~${total}GB / 112GB (+ ~1GB embedding/reranker)"
+
+            local avail
+            avail=$(awk "BEGIN {printf \"%.0f\", 100 - ${total}}")
+            if (( avail < 10 )); then
+                echo -e "  ${RED}Warning: Only ~${avail}GB free for KV cache + system${NC}"
+            else
+                echo -e "  ${GREEN}~${avail}GB available for KV cache + system${NC}"
+            fi
+            ;;
+
+        apply|a)
+            [[ -z "$name" ]] && { error "Usage: dream stack apply <name>"; return 1; }
+            local file="$STACKS_DIR/${name}.yaml"
+            [[ -f "$file" ]] || { error "Stack not found: $name"; return 1; }
+
+            local pn pl pv un ul uv mlm ctx total
+            pn=$(_stack_val "$file" models.primary.name)
+            pl=$(_stack_val "$file" models.primary.lemonade_id)
+            pv=$(_stack_val "$file" models.primary.vram_gb)
+            un=$(_stack_val "$file" models.utility.name)
+            ul=$(_stack_val "$file" models.utility.lemonade_id)
+            uv=$(_stack_val "$file" models.utility.vram_gb)
+            mlm=$(_stack_val "$file" lemonade.max_loaded_models)
+            ctx=$(_stack_val "$file" lemonade.ctx_size)
+            total=$(awk "BEGIN {printf \"%.0f\", ${pv:-0} + ${uv:-0} + 1}")
+
+            # VRAM budget check
+            if (( total > 112 )); then
+                error "Stack requires ~${total}GB but system has 112GB. Aborting."
+                return 1
+            fi
+            if (( total > 100 )); then
+                warn "Stack uses ~${total}GB — tight fit (112GB total, ~12GB for system/KV cache)"
+            fi
+
+            log "Applying stack: ${name}"
+            echo -e "  Primary:  ${CYAN}${pn}${NC} (~${pv}GB)"
+            echo -e "  Utility:  ${CYAN}${un}${NC} (~${uv}GB)"
+            echo ""
+
+            # 1. Update .env
+            _env_set "DREAM_STACK" "$name"
+            _env_set "LEMONADE_MAX_LOADED_MODELS" "$mlm"
+            _env_set "CTX_SIZE" "$ctx"
+            log "Updated .env"
+
+            # 2. Patch LiteLLM local alias
+            _stack_patch_litellm "$pl"
+            log "Patched LiteLLM config (local → $pn)"
+
+            # 3. Patch OpenClaw subagent/compaction model
+            _stack_patch_openclaw "$un"
+            log "Patched OpenClaw config (subagent/compaction → $un)"
+
+            # 4. Restart services
+            local flags
+            flags=($(get_compose_flags))
+            log "Restarting llama-server..."
+            docker compose "${flags[@]}" up -d --force-recreate llama-server 2>&1 | tail -3
+
+            log "Restarting litellm..."
+            docker compose "${flags[@]}" restart litellm 2>&1 | tail -1
+
+            log "Restarting openclaw..."
+            docker compose "${flags[@]}" restart openclaw 2>&1 | tail -1
+
+            # 5. Wait for Lemonade health
+            log "Waiting for Lemonade to start..."
+            local container
+            container=$(sr_container "$(sr_resolve llm)")
+            local attempts=0
+            while (( attempts < 30 )); do
+                if curl -sf http://127.0.0.1:11434/api/v1/health >/dev/null 2>&1; then
+                    break
+                fi
+                sleep 4
+                attempts=$((attempts + 1))
+            done
+            if (( attempts >= 30 )); then
+                warn "Lemonade health check timed out. Models may still be loading."
+                return 1
+            fi
+
+            # 6. Register infra models
+            log "Registering embedding/reranker models..."
+            _stack_register_infra "$container"
+
+            # 7. Warm-load models
+            log "Warm-loading models into VRAM..."
+            _stack_warmup "$container" "$pl" "$ul"
+
+            echo ""
+            success "Stack '${name}' applied"
+            echo -e "  ${GREEN}Primary:${NC}  $pn (loaded)"
+            echo -e "  ${GREEN}Utility:${NC}  $un (loaded)"
+            echo -e "  ${GREEN}VRAM:${NC}     ~${total}GB / 112GB"
+            ;;
+
+        status|st)
+            echo -e "${BLUE}━━━ Model Stack Status ━━━${NC}"
+            echo ""
+            local active="${DREAM_STACK:-none}"
+            local mlm="${LEMONADE_MAX_LOADED_MODELS:-1}"
+            echo -e "  Active stack:          ${CYAN}${active}${NC}"
+            echo -e "  Max loaded (per type): ${mlm}"
+            echo ""
+
+            # Query Lemonade for loaded/available models
+            local models_json
+            models_json=$(curl -s http://127.0.0.1:11434/v1/models 2>/dev/null)
+            if [[ -n "$models_json" ]]; then
+                echo -e "  ${CYAN}Available models:${NC}"
+                echo "$models_json" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for m in data.get('data', []):
+    mid = m.get('id', '?')
+    labels = ', '.join(m.get('labels', []))
+    size = m.get('size')
+    size_str = f'{size:.1f}GB' if size else '?'
+    print(f'    {mid:55s}  {labels:20s}  {size_str}')
+" 2>/dev/null || echo "    (could not parse model list)"
+            else
+                echo "  ${YELLOW}Lemonade not reachable${NC}"
+            fi
+
+            # Show active stack details
+            if [[ "$active" != "none" && -f "${STACKS_DIR}/${active}.yaml" ]]; then
+                echo ""
+                local pn un
+                pn=$(_stack_val "${STACKS_DIR}/${active}.yaml" models.primary.name)
+                un=$(_stack_val "${STACKS_DIR}/${active}.yaml" models.utility.name)
+                echo -e "  ${CYAN}Stack routing:${NC}"
+                echo -e "    Primary (local alias): ${GREEN}${pn}${NC}"
+                echo -e "    Utility (subagent):    ${GREEN}${un}${NC}"
+            fi
+            ;;
+
+        help|h|--help)
+            cat << 'EOF'
+Usage: dream stack <command> [args]
+
+Commands:
+  list              Show available model stacks
+  show <name>       Display stack details and VRAM estimate
+  apply <name>      Switch to a stack (restarts services)
+  status            Show currently loaded models and active stack
+
+Examples:
+  dream stack list
+  dream stack show coder
+  dream stack apply coder
+  dream stack status
+EOF
+            ;;
+
+        *)
+            error "Unknown stack command: $action. Run 'dream stack help' for usage."
+            return 1
+            ;;
+    esac
+}
+
+#=============================================================================
 # Mode Switch Commands (M1 Zero-Cloud Phase 3)
 #=============================================================================
 cmd_mode() {
@@ -2825,6 +3154,12 @@ ${CYAN}Preset Commands:${NC}
   preset import <file.tar.gz>
                          Import preset from archive
 
+${CYAN}Stack Commands:${NC}
+  stack list            Show available model stacks
+  stack show <name>     Display stack details and VRAM estimate
+  stack apply <name>    Switch model stack (restarts services)
+  stack status          Show loaded models and active stack
+
 ${CYAN}Mode Commands:${NC}
   mode                Show current mode
   mode local          Switch to local mode (llama-server)
@@ -2894,6 +3229,9 @@ ${CYAN}Examples:${NC}
   dream lemonade delete <model>   # Delete a downloaded model
   dream lemonade status           # Show running model info
   dream lemonade run <model>      # Load and run a specific model
+  dream stack list                # Show available model stacks
+  dream stack apply coder         # Switch to the coder stack
+  dream stack status              # Show loaded models + active stack
 
 ${CYAN}Environment:${NC}
   DREAM_HOME          Installation directory (default: ~/dream-server)
@@ -2912,6 +3250,7 @@ case "${1:-help}" in
     enable)      shift; cmd_enable "$@" ;;
     disable)     shift; cmd_disable "$@" ;;
     preset|p)    shift; cmd_preset "$@" ;;
+    stack|stk)   shift; cmd_stack "$@" ;;
     mode|m)      shift; cmd_mode "$@" ;;
     model)       shift; cmd_model "$@" ;;
     backup)      shift; cmd_backup "$@" ;;

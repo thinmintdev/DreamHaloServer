@@ -1,0 +1,16 @@
+name: minimal
+description: "Low-VRAM stack for testing or background tasks"
+
+models:
+  primary:
+    name: nemotron-3-nano
+    lemonade_id: extra.Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf
+    vram_gb: 22
+  utility:
+    name: qwen3.5-2b
+    lemonade_id: extra.Qwen3.5-2B-Q4_K_M.gguf
+    vram_gb: 2
+
+lemonade:
+  max_loaded_models: 3
+  ctx_size: 32768
