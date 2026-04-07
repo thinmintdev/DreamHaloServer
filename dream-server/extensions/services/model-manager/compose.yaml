@@ -1,0 +1,34 @@
+services:
+  model-manager:
+    build:
+      context: ./extensions/services/model-manager
+      dockerfile: Dockerfile
+    container_name: dream-model-manager
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - AI_MODELS_PATH=/models
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_KEY=${LITELLM_KEY:-}
+    volumes:
+      - "${AI_MODELS_PATH:-./data/models}:/models"
+    ports:
+      - "0.0.0.0:${MODEL_MANAGER_PORT:-3010}:3010"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3010/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
