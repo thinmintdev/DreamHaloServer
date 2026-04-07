@@ -1,0 +1,35 @@
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: unsloth-studio
+  name: "Unsloth Studio (Fine-tuning)"
+  aliases: [unsloth, finetune]
+  container_name: dream-unsloth-studio
+  default_host: unsloth-studio
+  port: 7680
+  external_port_env: UNSLOTH_PORT
+  external_port_default: 7680
+  health: /
+  ui_path: /
+  type: docker
+  gpu_backends: [amd, nvidia]
+  compose_file: compose.yaml
+  category: optional
+  depends_on: []
+
+features:
+  - id: finetuning
+    name: Model Fine-tuning
+    description: Fine-tune open-source LLMs on custom datasets with Unsloth Studio
+    icon: Wrench
+    category: training
+    requirements:
+      services: [unsloth-studio]
+      vram_gb: 8
+    enabled_services_all: [unsloth-studio]
+    setup_time: ~10 minutes
+    priority: 6
+    gpu_backends: [amd, nvidia]
