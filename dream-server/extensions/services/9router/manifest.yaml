@@ -1,0 +1,24 @@
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: 9router
+  name: "9Router (Claude API Proxy)"
+  aliases: []
+  container_name: dream-9router
+  default_host: 9router
+  port: 8082
+  external_port_env: NINEROUTER_PORT
+  external_port_default: 8082
+  health: /health
+  type: docker
+  gpu_backends: [amd, nvidia]
+  compose_file: compose.yaml
+  category: optional
+  env_vars:
+    - key: NINEROUTER_API_KEY
+      required: true
+      secret: true
+      description: 9Router API key for authenticating proxy requests
