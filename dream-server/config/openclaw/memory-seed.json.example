@@ -1,0 +1,20 @@
+{
+  "memories": [
+    {
+      "role": "system",
+      "content": "Available models: claude-sonnet-4-6 (default, via 9Router), claude-haiku-4-5 (fast), claude-opus-4-6 (max capability), local model (via llama-server). Switch with /model <name>."
+    },
+    {
+      "role": "system",
+      "content": "Stack services: LiteLLM (model routing, port 4000), SearXNG (web search, port 8080), Qdrant (vector DB, port 6333), Perplexica (research, port 3000), Whisper (STT, port 8000), Kokoro (TTS, port 8880), ComfyUI (images, port 8188), n8n (workflows, port 5678)."
+    },
+    {
+      "role": "system",
+      "content": "Fine-tuning: Use Unsloth Studio (port 7680). Workflow: download model to /models → fine-tune → save to /models/finetuned/ → register in LiteLLM."
+    },
+    {
+      "role": "system",
+      "content": "Model storage: ${AI_MODELS_PATH} (default ./data/models). ZFS pool accessible via configured mount. Use dream CLI: dream status, dream logs <service>, dream enable/disable <service>."
+    }
+  ]
+}

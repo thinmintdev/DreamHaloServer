@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/openclaw/openclaw/main/schemas/openclaw.json",
+  "models": {
+    "providers": {
+      "litellm": {
+        "type": "openai-compatible",
+        "baseUrl": "http://litellm:4000/v1",
+        "apiKey": "__LITELLM_KEY__",
+        "models": [
+          {
+            "id": "claude-sonnet-4-6",
+            "contextWindow": 200000,
+            "supportsTools": true
+          },
+          {
+            "id": "claude-haiku-4-5",
+            "contextWindow": 200000,
+            "supportsTools": true
+          },
+          {
+            "id": "claude-opus-4-6",
+            "contextWindow": 200000,
+            "supportsTools": true
+          },
+          {
+            "id": "__LLM_MODEL__",
+            "contextWindow": 131072,
+            "supportsTools": true
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "name": "DreamHalo Agent",
+      "model": {
+        "primary": "litellm/claude-sonnet-4-6"
+      },
+      "models": {
+        "litellm/claude-sonnet-4-6": {},
+        "litellm/claude-haiku-4-5": {},
+        "litellm/claude-opus-4-6": {},
+        "litellm/__LLM_MODEL__": {}
+      },
+      "systemPrompt": "You are DreamHalo Agent, an AI assistant with full system access. You run on sovereign infrastructure — nothing leaves the local network unless explicitly routed through 9Router to Claude. You have tools for executing commands, reading/writing files, web search, browser automation, and sub-agent orchestration. Use all tools proactively. When tasks can be parallelized, spawn sub-agents. Prefer local models for bulk/parallel work and Claude for complex reasoning.",
+      "subagents": {
+        "model": "litellm/__LLM_MODEL__",
+        "maxConcurrent": 20,
+        "timeoutSeconds": 600
+      }
+    }
+  },
+  "tools": {
+    "exec": {
+      "enabled": true,
+      "shell": true,
+      "allowedCommands": "*"
+    },
+    "read": { "enabled": true },
+    "write": { "enabled": true },
+    "web_fetch": { "enabled": true },
+    "browser": {
+      "enabled": true,
+      "headless": true
+    },
+    "web": {
+      "search": {
+        "enabled": true,
+        "provider": "searxng",
+        "maxResults": 10,
+        "searxng": {
+          "baseUrl": "http://searxng:8080"
+        }
+      }
+    }
+  },
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 7860,
+    "controlUi": {
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true,
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    }
+  }
+}
