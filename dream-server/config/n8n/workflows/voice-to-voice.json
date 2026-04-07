@@ -1,0 +1,67 @@
+{
+  "name": "Voice-to-Voice Pipeline",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "voice-pipeline" },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://whisper:8000/v1/audio/transcriptions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "model", "value": "Systran/faster-whisper-base" }] }
+      },
+      "name": "Whisper STT",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://litellm:4000/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "claude-sonnet-4-6" },
+            { "name": "messages", "value": "=[{\"role\": \"user\", \"content\": \"{{ $json.text }}\"}]" }
+          ]
+        }
+      },
+      "name": "LLM Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://tts:8880/v1/audio/speech",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "kokoro" },
+            { "name": "input", "value": "={{ $json.choices[0].message.content }}" },
+            { "name": "voice", "value": "af_heart" }
+          ]
+        }
+      },
+      "name": "Kokoro TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {},
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Whisper STT", "type": "main", "index": 0 }]] },
+    "Whisper STT": { "main": [[{ "node": "LLM Chat", "type": "main", "index": 0 }]] },
+    "LLM Chat": { "main": [[{ "node": "Kokoro TTS", "type": "main", "index": 0 }]] },
+    "Kokoro TTS": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}
