@@ -1,0 +1,38 @@
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: model-manager
+  name: Model Manager
+  aliases: [models]
+  container_name: dream-model-manager
+  default_host: model-manager
+  port: 3010
+  external_port_env: MODEL_MANAGER_PORT
+  external_port_default: 3010
+  health: /health
+  type: docker
+  gpu_backends: [amd, nvidia]
+  compose_file: compose.yaml
+  category: optional
+  depends_on: [litellm]
+  env_vars:
+    - key: AI_MODELS_PATH
+      required: false
+      description: Path to shared model storage directory
+
+features:
+  - id: model-management
+    name: Model Management
+    description: Browse, load, unload, download, and delete AI models
+    icon: Database
+    category: models
+    requirements:
+      services: [model-manager]
+      vram_gb: 0
+    enabled_services_all: [model-manager]
+    setup_time: Ready
+    priority: 8
+    gpu_backends: [amd, nvidia]
