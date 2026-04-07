@@ -32,6 +32,11 @@ try {
   if (!config.gateway) config.gateway = {};
   if (!config.gateway.controlUi) config.gateway.controlUi = {};
 
+  // Trust private network proxies (Traefik, Docker networks) for WebSocket origin detection
+  if (!config.gateway.trustedProxies) {
+    config.gateway.trustedProxies = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'];
+  }
+
   // Add external port origins so the Control UI can connect through Docker port mapping
   const origins = config.gateway.controlUi.allowedOrigins || [];
   const needed = [
@@ -53,59 +58,55 @@ try {
   config.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = true;
 
   // Keep token auth (required for LAN bind) with token from env
-  if (token) {
+  const password = process.env.OPENCLAW_GATEWAY_PASSWORD || '';
+  if (password) {
+    config.gateway.auth = { mode: 'password' };
+  } else if (token) {
     config.gateway.auth = { mode: 'token', token: token };
   }
 
-  // Fix model references to match what llama-server actually serves
-  if (LLM_MODEL) {
-    // Find the provider name (first key under models.providers)
-    const providerName = config.models?.providers
-      ? Object.keys(config.models.providers)[0]
-      : null;
+  // Sync full model list and provider config from the primary config file
+  // This ensures the runtime config has all models defined in OPENCLAW_CONFIG
+  const primaryConfigPath = process.env.OPENCLAW_CONFIG || '/config/openclaw.json';
+  if (fs.existsSync(primaryConfigPath)) {
+    try {
+      const primary = JSON.parse(fs.readFileSync(primaryConfigPath, 'utf8'));
 
-    if (providerName && config.models.providers[providerName]) {
-      const provider = config.models.providers[providerName];
-
-      // Route through LiteLLM when OLLAMA_URL points to it, and pass credentials
-      const ollamaUrl = process.env.OLLAMA_URL || '';
-      const litellmKey = process.env.LITELLM_KEY || '';
-      if (ollamaUrl) {
-        const newBase = ollamaUrl.replace(/\/$/, '') + '/v1';
-        if (provider.baseUrl !== newBase) {
-          console.log(`[inject-token] updated provider baseUrl: ${provider.baseUrl} -> ${newBase}`);
-          provider.baseUrl = newBase;
-        }
-        if (litellmKey && provider.apiKey !== litellmKey) {
-          provider.apiKey = litellmKey;
-          console.log(`[inject-token] updated provider apiKey from env`);
-        }
+      // Sync providers (models, baseUrl, apiKey) from primary config
+      if (primary.models?.providers) {
+        if (!config.models) config.models = {};
+        config.models.providers = JSON.parse(JSON.stringify(primary.models.providers));
+        console.log('[inject-token] synced model providers from primary config');
       }
 
-      // Update model list — replace the first model's id
-      if (Array.isArray(provider.models) && provider.models.length > 0) {
-        const oldId = provider.models[0].id;
-        if (oldId !== LLM_MODEL) {
-          provider.models[0].id = LLM_MODEL;
-          console.log(`[inject-token] updated provider model: ${oldId} -> ${LLM_MODEL}`);
-        }
+      // Sync agent defaults from primary config
+      if (primary.agents?.defaults) {
+        config.agents = config.agents || {};
+        config.agents.defaults = JSON.parse(JSON.stringify(primary.agents.defaults));
+        console.log('[inject-token] synced agent defaults from primary config');
       }
+    } catch (err) {
+      console.error('[inject-token] primary config sync warning:', err.message);
     }
+  }
 
-    // Update agents.defaults model references
-    if (config.agents?.defaults) {
-      const d = config.agents.defaults;
-      const fullOld = d.model?.primary || '';
-      if (fullOld && providerName) {
-        const fullNew = `${providerName}/${LLM_MODEL}`;
-        if (fullOld !== fullNew) {
-          d.model = { primary: fullNew };
-          // Rebuild models map
-          d.models = { [fullNew]: {} };
-          // Fix subagent model
-          if (d.subagents) d.subagents.model = fullNew;
-          console.log(`[inject-token] updated agent model refs: ${fullOld} -> ${fullNew}`);
-        }
+  // Route through LiteLLM when OLLAMA_URL points to it, and pass credentials
+  const providerName = config.models?.providers
+    ? Object.keys(config.models.providers)[0]
+    : null;
+  if (providerName && config.models.providers[providerName]) {
+    const provider = config.models.providers[providerName];
+    const ollamaUrl = process.env.OLLAMA_URL || '';
+    const litellmKey = process.env.LITELLM_KEY || '';
+    if (ollamaUrl) {
+      const newBase = ollamaUrl.replace(/\/$/, '') + '/v1';
+      if (provider.baseUrl !== newBase) {
+        console.log(`[inject-token] updated provider baseUrl: ${provider.baseUrl} -> ${newBase}`);
+        provider.baseUrl = newBase;
+      }
+      if (litellmKey && provider.apiKey !== litellmKey) {
+        provider.apiKey = litellmKey;
+        console.log(`[inject-token] updated provider apiKey from env`);
       }
     }
   }

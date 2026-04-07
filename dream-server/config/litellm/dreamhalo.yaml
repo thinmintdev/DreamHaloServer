@@ -1,40 +1,110 @@
 model_list:
+  # ── Claude models via CLIProxyAPI ──────────────────────────────────────────
   - model_name: claude-sonnet-4-6
     litellm_params:
-      model: anthropic/claude-sonnet-4-6
+      model: openai/claude-sonnet-4-6
       api_base: http://cliproxyapi:8317/v1
-      api_key: dummy
+      api_key: dreamhalo
 
   - model_name: claude-haiku-4-5
     litellm_params:
-      model: anthropic/claude-haiku-4-5
+      model: openai/claude-haiku-4-5-20251001
       api_base: http://cliproxyapi:8317/v1
-      api_key: dummy
+      api_key: dreamhalo
 
   - model_name: claude-opus-4-6
     litellm_params:
-      model: anthropic/claude-opus-4-6
+      model: openai/claude-opus-4-6
       api_base: http://cliproxyapi:8317/v1
-      api_key: dummy
+      api_key: dreamhalo
 
+  # ── Local LLMs via Lemonade ────────────────────────────────────────────────
+  - model_name: qwen3-coder-next
+    litellm_params:
+      model: openai/extra.Qwen3-Coder-Next-MXFP4_MOE.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: qwen3.5-35b-a3b
+    litellm_params:
+      model: openai/extra.Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: glm-4.7-flash
+    litellm_params:
+      model: openai/extra.GLM-4.7-Flash-UD-Q4_K_XL.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: nemotron-3-nano
+    litellm_params:
+      model: openai/extra.Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: gpt-oss-20b
+    litellm_params:
+      model: openai/extra.gpt-oss-20b-Q4_K_M.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: devstral-small
+    litellm_params:
+      model: openai/extra.Devstral-Small-2507-Q4_K_M.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: qwen3.5-4b
+    litellm_params:
+      model: openai/extra.Qwen3.5-4B-UD-Q4_K_XL.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  - model_name: qwen3.5-2b
+    litellm_params:
+      model: openai/extra.Qwen3.5-2B-Q4_K_M.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  # ── Embeddings via Lemonade ────────────────────────────────────────────────
+  - model_name: nomic-embed-text
+    litellm_params:
+      model: openai/extra.nomic-embed-text-v1.5.Q8_0.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  # ── Reranking via Lemonade ─────────────────────────────────────────────────
+  - model_name: bge-reranker-v2-m3
+    litellm_params:
+      model: openai/extra.bge-reranker-v2-m3-q8_0.gguf
+      api_base: http://llama-server:8080/v1
+      api_key: not-needed
+
+  # ── Aliases ────────────────────────────────────────────────────────────────
   - model_name: local
     litellm_params:
-      model: openai/default
+      model: openai/extra.Qwen3-Coder-Next-MXFP4_MOE.gguf
       api_base: http://llama-server:8080/v1
       api_key: not-needed
 
   - model_name: default
     litellm_params:
-      model: anthropic/claude-sonnet-4-6
+      model: openai/claude-sonnet-4-6
       api_base: http://cliproxyapi:8317/v1
-      api_key: dummy
+      api_key: dreamhalo
 
 router_settings:
   routing_strategy: simple-shuffle
   num_retries: 2
   fallbacks:
+    - claude-opus-4-6:
+        - claude-sonnet-4-6
+        - qwen3-coder-next
     - claude-sonnet-4-6:
-        - local
+        - qwen3-coder-next
+    - claude-haiku-4-5:
+        - qwen3-coder-next
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
@@ -42,5 +112,5 @@ general_settings:
 litellm_settings:
   drop_params: true
   set_verbose: false
-  request_timeout: 120
-  stream_timeout: 60
+  request_timeout: 300
+  stream_timeout: 120

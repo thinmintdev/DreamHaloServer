@@ -3,37 +3,26 @@
   "models": {
     "providers": {
       "litellm": {
-        "type": "openai-compatible",
         "baseUrl": "http://litellm:4000/v1",
         "apiKey": "__LITELLM_KEY__",
         "models": [
-          {
-            "id": "claude-sonnet-4-6",
-            "contextWindow": 200000,
-            "supportsTools": true
-          },
-          {
-            "id": "claude-haiku-4-5",
-            "contextWindow": 200000,
-            "supportsTools": true
-          },
-          {
-            "id": "claude-opus-4-6",
-            "contextWindow": 200000,
-            "supportsTools": true
-          },
-          {
-            "id": "__LLM_MODEL__",
-            "contextWindow": 131072,
-            "supportsTools": true
-          }
+          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "contextWindow": 200000 },
+          { "id": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "contextWindow": 200000 },
+          { "id": "claude-opus-4-6", "name": "Claude Opus 4.6", "contextWindow": 200000 },
+          { "id": "qwen3-coder-next", "name": "Qwen3 Coder Next (local)", "contextWindow": 131072 },
+          { "id": "qwen3.5-35b-a3b", "name": "Qwen3.5 35B A3B (local)", "contextWindow": 131072 },
+          { "id": "glm-4.7-flash", "name": "GLM 4.7 Flash (local)", "contextWindow": 131072 },
+          { "id": "nemotron-3-nano", "name": "Nemotron 3 Nano (local)", "contextWindow": 131072 },
+          { "id": "devstral-small", "name": "Devstral Small (local)", "contextWindow": 131072 },
+          { "id": "gpt-oss-20b", "name": "GPT-OSS 20B (local)", "contextWindow": 131072 },
+          { "id": "local", "name": "Local Default", "contextWindow": 131072 },
+          { "id": "default", "name": "Default (Sonnet)", "contextWindow": 200000 }
         ]
       }
     }
   },
   "agents": {
     "defaults": {
-      "name": "DreamHalo Agent",
       "model": {
         "primary": "litellm/claude-sonnet-4-6"
       },
@@ -41,13 +30,18 @@
         "litellm/claude-sonnet-4-6": {},
         "litellm/claude-haiku-4-5": {},
         "litellm/claude-opus-4-6": {},
-        "litellm/__LLM_MODEL__": {}
+        "litellm/qwen3-coder-next": {},
+        "litellm/qwen3.5-35b-a3b": {},
+        "litellm/glm-4.7-flash": {},
+        "litellm/nemotron-3-nano": {},
+        "litellm/devstral-small": {},
+        "litellm/gpt-oss-20b": {},
+        "litellm/local": {},
+        "litellm/default": {}
       },
-      "systemPrompt": "You are DreamHalo Agent, an AI assistant with full system access. You run on sovereign infrastructure — nothing leaves the local network unless explicitly routed through 9Router to Claude. You have tools for executing commands, reading/writing files, web search, browser automation, and sub-agent orchestration. Use all tools proactively. When tasks can be parallelized, spawn sub-agents. Prefer local models for bulk/parallel work and Claude for complex reasoning.",
       "subagents": {
-        "model": "litellm/__LLM_MODEL__",
-        "maxConcurrent": 20,
-        "timeoutSeconds": 600
+        "model": "litellm/qwen3-coder-next",
+        "maxConcurrent": 20
       }
     }
   },
@@ -78,6 +72,10 @@
   "gateway": {
     "host": "0.0.0.0",
     "port": 7860,
+    "auth": {
+      "mode": "password"
+    },
+    "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
     "controlUi": {
       "allowInsecureAuth": true,
       "dangerouslyDisableDeviceAuth": true,

@@ -10,6 +10,7 @@ services:
       # DreamHalo mode (Claude via 9Router): set OPENCLAW_CONFIG=/config/openclaw-dreamhalo.json
       - OPENCLAW_DATA=/data
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_TOKEN:?Set OPENCLAW_TOKEN in .env}
+      - OPENCLAW_GATEWAY_PASSWORD=${OPENCLAW_GATEWAY_PASSWORD:-dreamhalo}
       - LLM_MODEL=${LLM_MODEL:-qwen3:30b-a3b}
       - BOOTSTRAP_MODEL=${BOOTSTRAP_MODEL:-qwen3:8b-q4_K_M}
       - OLLAMA_URL=${LLM_API_URL:-http://llama-server:8080}
@@ -48,9 +49,8 @@ services:
       retries: 3
       start_period: 30s
 
-  # When OpenClaw is enabled, register it as a second model backend in Open WebUI.
-  # Port 18790 is the OpenAI-compat shim (serves /v1/models + proxies /v1/chat/completions).
+  # Route Open WebUI through LiteLLM so all models (local + Claude) are available
   open-webui:
     environment:
-      - OPENAI_API_BASE_URLS=${LLM_API_URL:-http://llama-server:8080}/v1;http://openclaw:18790/v1
-      - OPENAI_API_KEYS=;${OPENCLAW_TOKEN:-}
+      - OPENAI_API_BASE_URLS=http://litellm:4000/v1;http://openclaw:18790/v1
+      - OPENAI_API_KEYS=${LITELLM_KEY:-};${OPENCLAW_TOKEN:-}

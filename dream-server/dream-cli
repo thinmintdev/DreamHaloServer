@@ -2097,6 +2097,76 @@ cmd_agent() {
 }
 
 #=============================================================================
+# cmd_lemonade — Lemonade Server model management
+#=============================================================================
+
+cmd_lemonade() {
+    check_install
+    cd "$INSTALL_DIR"
+
+    local container
+    container=$(sr_container "$(sr_resolve llm)")
+    local action="${1:-list}"
+    shift 2>/dev/null || true
+
+    if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
+        error "Container '${container}' is not running. Start it first: dream start llm"
+        return 1
+    fi
+
+    case "$action" in
+        list|ls)
+            log "Available models in Lemonade:"
+            docker exec "$container" /opt/lemonade/lemonade-server list 2>&1
+            ;;
+        pull|download)
+            if [[ -z "${1:-}" ]]; then
+                error "Usage: dream lemonade pull <model-name>"
+                echo "  Run 'dream lemonade list' to see available models"
+                return 1
+            fi
+            log "Pulling model: $1"
+            docker exec "$container" /opt/lemonade/lemonade-server pull "$@" 2>&1
+            ;;
+        delete|rm|remove)
+            if [[ -z "${1:-}" ]]; then
+                error "Usage: dream lemonade delete <model-name>"
+                return 1
+            fi
+            log "Deleting model: $1"
+            docker exec "$container" /opt/lemonade/lemonade-server delete "$@" 2>&1
+            ;;
+        run|load)
+            if [[ -z "${1:-}" ]]; then
+                error "Usage: dream lemonade run <model-name>"
+                return 1
+            fi
+            log "Running model: $1"
+            docker exec "$container" /opt/lemonade/lemonade-server run "$@" 2>&1
+            ;;
+        status)
+            log "Lemonade server status:"
+            docker exec "$container" /opt/lemonade/lemonade-server status 2>&1
+            ;;
+        recipes)
+            log "Available Lemonade recipes:"
+            docker exec "$container" /opt/lemonade/lemonade-server recipes "$@" 2>&1
+            ;;
+        *)
+            echo -e "${BLUE}Usage: dream lemonade <command> [args]${NC}"
+            echo ""
+            echo "Commands:"
+            echo "  list              List all available models"
+            echo "  pull <model>      Download a model from the catalog"
+            echo "  delete <model>    Delete a downloaded model"
+            echo "  run <model>       Load and run a specific model"
+            echo "  status            Show server status"
+            echo "  recipes           List available execution backends"
+            ;;
+    esac
+}
+
+#=============================================================================
 # cmd_gpu — Multi-GPU inspection and management
 #=============================================================================
 
@@ -2819,6 +2889,11 @@ ${CYAN}Examples:${NC}
   dream audit --json whisper      # Audit one service as JSON
   dream agent status              # Check host agent health
   dream agent restart             # Restart host agent
+  dream lemonade list             # List available models in Lemonade
+  dream lemonade pull <model>     # Download a model from Lemonade catalog
+  dream lemonade delete <model>   # Delete a downloaded model
+  dream lemonade status           # Show running model info
+  dream lemonade run <model>      # Load and run a specific model
 
 ${CYAN}Environment:${NC}
   DREAM_HOME          Installation directory (default: ~/dream-server)
@@ -2855,6 +2930,7 @@ case "${1:-help}" in
     doctor|diag|d) shift; cmd_doctor "$@" ;;
     audit)        shift; cmd_audit "$@" ;;
     agent)        shift; cmd_agent "$@" ;;
+    lemonade|lem) shift; cmd_lemonade "$@" ;;
     help|h|--help|-h) cmd_help ;;
     version|v|--version|-v) echo "dream-cli v${VERSION}" ;;
     *)           error "Unknown command: $1. Run 'dream help' for usage." ;;
