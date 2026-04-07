@@ -16,6 +16,8 @@
           { "id": "devstral-small", "name": "Devstral Small (local)", "contextWindow": 131072, "api": "openai-completions"},
           { "id": "gpt-oss-20b", "name": "GPT-OSS 20B (local)", "contextWindow": 131072, "api": "openai-completions"},
           { "id": "kappa-20b", "name": "Kappa 20B (neutral_good)", "contextWindow": 131072, "api": "openai-completions"},
+          { "id": "qwen3.5-4b", "name": "Qwen3.5 4B (utility)", "contextWindow": 32768, "api": "openai-completions"},
+          { "id": "qwen3.5-2b", "name": "Qwen3.5 2B (tiny)", "contextWindow": 32768, "api": "openai-completions"},
           { "id": "local", "name": "Local Default", "contextWindow": 131072, "api": "openai-completions"},
           { "id": "default", "name": "Default (Sonnet)", "contextWindow": 200000, "api": "openai-completions"}
         ]
@@ -38,6 +40,8 @@
         "litellm/devstral-small": {},
         "litellm/gpt-oss-20b": {},
         "litellm/kappa-20b": {},
+        "litellm/qwen3.5-4b": {},
+        "litellm/qwen3.5-2b": {},
         "litellm/local": {},
         "litellm/default": {}
       },
@@ -95,8 +99,51 @@
           "watch": true
         }
       }
+    },
+    "list": [
+      {
+        "id": "agentmint",
+        "name": "AgentMint",
+        "default": true,
+        "workspace": "/home/node/.openclaw/workspace"
+      },
+      {
+        "id": "mintops",
+        "name": "MintOps",
+        "workspace": "/home/node/.openclaw/workspace-mintops",
+        "model": {
+          "primary": "litellm/claude-sonnet-4-6"
+        },
+        "skills": ["healthcheck", "mcporter", "memory-maintenance", "session-logs", "tmux"]
+      }
+    ]
+  },
+  "skills": {
+    "allowBundled": [
+      "clawhub",
+      "coding-agent",
+      "github",
+      "gog",
+      "healthcheck",
+      "mcporter",
+      "obsidian",
+      "session-logs",
+      "skill-creator",
+      "summarize",
+      "tmux",
+      "weather"
+    ],
+    "entries": {
+      "gemini": { "enabled": false },
+      "discord": { "enabled": false }
     }
   },
+  "bindings": [
+    {
+      "agentId": "agentmint",
+      "match": { "channel": "telegram" }
+    }
+  ],
   "tools": {
     "exec": {
       "enabled": true,
@@ -120,6 +167,10 @@
           "baseUrl": "http://searxng:8080"
         }
       }
+    },
+    "agentToAgent": {
+      "enabled": true,
+      "allow": ["agentmint", "mintops"]
     }
   },
   "channels": {

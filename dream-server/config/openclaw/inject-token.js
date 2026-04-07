@@ -109,6 +109,27 @@ try {
         }
         console.log('[inject-token] synced channels config from primary config');
       }
+
+      // Sync agents.list for multi-agent mode
+      if (primary.agents?.list) {
+        config.agents = config.agents || {};
+        config.agents.list = JSON.parse(JSON.stringify(primary.agents.list));
+        console.log('[inject-token] synced agents.list (%d agents)', config.agents.list.length);
+      }
+
+      // Sync bindings (root-level key for agent routing)
+      if (primary.bindings) {
+        config.bindings = JSON.parse(JSON.stringify(primary.bindings));
+        console.log('[inject-token] synced bindings (%d rules)', config.bindings.length);
+      }
+
+      // Sync skills config (allowBundled, entries, etc.)
+      if (primary.skills) {
+        config.skills = JSON.parse(JSON.stringify(primary.skills));
+        console.log('[inject-token] synced skills config (allowBundled: %d, entries: %d)',
+          (config.skills.allowBundled || []).length,
+          Object.keys(config.skills.entries || {}).length);
+      }
     } catch (err) {
       console.error('[inject-token] primary config sync warning:', err.message);
     }
