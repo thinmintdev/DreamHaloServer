@@ -4,12 +4,14 @@ import {
   Settings,
   Puzzle,
   Activity,
+  Brain,
 } from 'lucide-react'
 
 const Dashboard = lazy(() => import('../pages/Dashboard'))
 const SettingsPage = lazy(() => import('../pages/Settings'))
 const Extensions = lazy(() => import('../pages/Extensions'))
 const GPUMonitor = lazy(() => import('../pages/GPUMonitor'))
+const Memory = lazy(() => import('../pages/Memory'))
 
 export const coreRoutes = [
   {
@@ -34,6 +36,16 @@ export const coreRoutes = [
     order: 1,
   },
   {
+    id: 'memory',
+    path: '/memory',
+    label: 'Memory',
+    icon: Brain,
+    component: Memory,
+    getProps: () => ({}),
+    sidebar: true,
+    order: 2,
+  },
+  {
     id: 'extensions',
     path: '/extensions',
     label: 'Extensions',
@@ -41,6 +53,7 @@ export const coreRoutes = [
     component: Extensions,
     getProps: () => ({}),
     sidebar: true,
+    order: 3,
   },
   {
     id: 'settings',

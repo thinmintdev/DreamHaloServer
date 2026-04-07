@@ -20,12 +20,7 @@ import {
 import { memo, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FeatureDiscoveryBanner } from '../components/FeatureDiscovery'
-
-// Helper to build external service URLs from current host
-const getExternalUrl = (port) =>
-  typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:${port}`
-    : `http://localhost:${port}`
+import { getServiceUrl } from '../utils/serviceUrls'
 
 // Compute overall health from services (excludes not_deployed from counts)
 function computeHealth(services) {
@@ -57,11 +52,11 @@ function pickFeatureLink(feature, services) {
 
   const firstHealthy = wanted.map(matchService).find(Boolean)
   if (firstHealthy) {
-    return getExternalUrl(firstHealthy.port)
+    return getServiceUrl(firstHealthy.port)
   }
 
   const fallbackWebUi = matchService('webui') || matchService('open webui')
-  return fallbackWebUi ? getExternalUrl(fallbackWebUi.port) : null
+  return fallbackWebUi ? getServiceUrl(fallbackWebUi.port) : null
 }
 
 function normalizeFeatureStatus(featureStatus) {
@@ -318,14 +313,12 @@ export default function Dashboard({ status, loading }) {
       label: 'Uptime',
       value: formatUptime(status?.uptime || 0),
       subvalue: 'system',
-    },
-    {
-      icon: Brain,
-      label: 'Model',
-      value: status?.inference?.loadedModel || '—',
-      subvalue: 'loaded',
     }
   )
+
+  // Model stack — show all loaded models (Lemonade multi-model support)
+  const loadedModels = status?.inference?.loadedModels || []
+  const activeModel = status?.inference?.loadedModel || null
 
   return (
     <div className="p-8">
@@ -418,19 +411,22 @@ export default function Dashboard({ status, loading }) {
               contextValue={status?.inference?.contextSize ? `${(status.inference.contextSize / 1024).toFixed(0)}k` : '—'}
             />
           </div>
-          <div className="liquid-metal-sequence-grid liquid-metal-sequence-grid--system grid grid-cols-2 gap-1.5 self-start">
-            {systemMetrics.map((metric) => (
-              <MetricCard
-                key={metric.label}
-                icon={metric.icon}
-                label={metric.label}
-                value={metric.value}
-                subvalue={metric.subvalue}
-                percent={metric.percent}
-                alert={metric.alert}
-                compact
-              />
-            ))}
+          <div className="self-start space-y-1.5">
+            <div className="liquid-metal-sequence-grid liquid-metal-sequence-grid--system grid grid-cols-2 gap-1.5">
+              {systemMetrics.map((metric) => (
+                <MetricCard
+                  key={metric.label}
+                  icon={metric.icon}
+                  label={metric.label}
+                  value={metric.value}
+                  subvalue={metric.subvalue}
+                  percent={metric.percent}
+                  alert={metric.alert}
+                  compact
+                />
+              ))}
+            </div>
+            <ModelStackPanel models={loadedModels} activeModel={activeModel} />
           </div>
         </div>
       </div>
@@ -753,6 +749,60 @@ const InteractiveSignalChart = memo(function InteractiveSignalChart({
           style={{ transition: dragging ? 'none' : 'all 180ms ease' }}
         />
       </svg>
+    </div>
+  )
+})
+
+const ModelStackPanel = memo(function ModelStackPanel({ models, activeModel }) {
+  // Shorten model names for display: "extra.Qwen3-Coder-Next-MXFP4_MOE.gguf" → "Qwen3-Coder-Next"
+  const shortName = (id) => {
+    if (!id) return '—'
+    let name = id.replace(/^(extra|user)\./i, '').replace(/\.gguf$/i, '')
+    // Strip quantization suffixes like -Q4_K_M, -MXFP4_MOE, -UD-Q4_K_XL
+    name = name.replace(/[-_](UD[-_])?[A-Z0-9]+_K(_[A-Z0-9]+)?$/i, '')
+      .replace(/[-_]MXFP\d+(_MOE)?$/i, '')
+    return name || id
+  }
+
+  if (!models?.length && !activeModel) {
+    return (
+      <div className="liquid-metal-frame liquid-metal-frame--soft bg-theme-card border border-theme-border rounded-xl px-2.5 py-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Brain size={12} className="text-theme-text-muted/50" />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted/55">Model Stack</span>
+        </div>
+        <p className="text-[11px] text-theme-text-muted/70">No models loaded</p>
+      </div>
+    )
+  }
+
+  const displayModels = models?.length ? models : (activeModel ? [{ id: activeModel, active: true }] : [])
+
+  return (
+    <div className="liquid-metal-frame liquid-metal-frame--soft bg-theme-card border border-theme-border rounded-xl px-2.5 py-2">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Brain size={12} className="text-theme-text-muted/50" />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted/55">Model Stack</span>
+        </div>
+        <span className="text-[9px] font-mono text-theme-text-muted/50">{displayModels.length} loaded</span>
+      </div>
+      <div className="space-y-1">
+        {displayModels.map((model) => {
+          const id = typeof model === 'string' ? model : model.id
+          const isActive = typeof model === 'string' ? id === activeModel : model.active
+          return (
+            <div
+              key={id}
+              className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 ${isActive ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-black/[0.08] border border-white/5'}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-theme-text-muted/30'}`} />
+              <span className="text-[11px] font-medium text-theme-text truncate" title={id}>{shortName(id)}</span>
+              {isActive && <span className="ml-auto text-[8px] font-semibold uppercase tracking-[0.14em] text-emerald-400">active</span>}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 })

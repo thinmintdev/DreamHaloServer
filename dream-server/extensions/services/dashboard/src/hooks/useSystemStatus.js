@@ -9,29 +9,48 @@ const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true'
 function getMockStatus() {
   return {
     gpu: {
-      name: 'NVIDIA RTX 4070 Ti Super',
-      vramUsed: 13.2,
-      vramTotal: 16,
-      utilization: 45,
-      temperature: 62
+      name: 'AMD Radeon RX 7900 XTX',
+      vramUsed: 18.4,
+      vramTotal: 96,
+      utilization: 32,
+      temperature: 58,
+      memoryType: 'unified',
+      backend: 'amd',
+      gpu_count: 1,
     },
     services: [
-      { name: 'llama-server', status: 'healthy', port: 8080, uptime: 7200 },
-      { name: 'Open WebUI', status: 'healthy', port: 3000, uptime: 7200 },
-      { name: 'Whisper (STT)', status: 'healthy', port: 9000, uptime: 7200 },
-      { name: 'Kokoro (TTS)', status: 'healthy', port: 8880, uptime: 7200 },
-      { name: 'Qdrant', status: 'healthy', port: 6333, uptime: 7200 },
-      { name: 'n8n', status: 'healthy', port: 5678, uptime: 7200 }
+      { name: 'Lemonade', status: 'healthy', port: 8080, uptime: 14400 },
+      { name: 'Open WebUI', status: 'healthy', port: 3000, uptime: 14400 },
+      { name: 'LiteLLM', status: 'healthy', port: 4000, uptime: 14400 },
+      { name: 'OpenClaw', status: 'healthy', port: 7860, uptime: 14400 },
+      { name: 'Qdrant', status: 'healthy', port: 6333, uptime: 14400 },
+      { name: 'SearXNG', status: 'healthy', port: 8888, uptime: 14400 },
+      { name: 'Whisper (STT)', status: 'healthy', port: 9000, uptime: 14400 },
+      { name: 'Kokoro (TTS)', status: 'healthy', port: 8880, uptime: 14400 },
+      { name: 'n8n', status: 'healthy', port: 5678, uptime: 14400 },
     ],
     model: {
-      name: 'Qwen2.5-32B-Instruct-AWQ',
-      tokensPerSecond: 54,
-      contextLength: 32768
+      name: 'extra.Qwen3-Coder-Next-MXFP4_MOE.gguf',
+      tokensPerSecond: 42,
+      contextLength: 131072,
     },
-    bootstrap: null, // null means no bootstrap in progress
-    uptime: 7200, // seconds
-    version: '1.0.0',
-    tier: 'Professional'
+    bootstrap: null,
+    uptime: 14400,
+    version: '2.0.0',
+    tier: 'Strix Halo 90+',
+    cpu: { percent: 18, temp_c: 52 },
+    ram: { used_gb: 22.4, total_gb: 96, percent: 23.3 },
+    inference: {
+      tokensPerSecond: 42,
+      lifetimeTokens: 2_850_000,
+      loadedModel: 'extra.Qwen3-Coder-Next-MXFP4_MOE.gguf',
+      loadedModels: [
+        { id: 'extra.Qwen3-Coder-Next-MXFP4_MOE.gguf', active: true },
+        { id: 'extra.GLM-4.7-Flash-UD-Q4_K_XL.gguf', active: false },
+        { id: 'user.nomic-embed', active: false },
+      ],
+      contextSize: 131072,
+    },
   }
 }
 

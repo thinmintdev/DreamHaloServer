@@ -1,5 +1,6 @@
 import { Settings as SettingsIcon, Server, HardDrive, RefreshCw, Download, Loader2, Network } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { getServiceUrl, getServiceUrlLabel, isSSLMode } from '../utils/serviceUrls'
 
 // Auth: nginx injects Authorization header for all /api/ requests (see nginx.conf).
 // All fetches use relative URLs through the nginx proxy.
@@ -165,7 +166,9 @@ export default function Settings() {
         {services.length > 0 && (
           <SettingsSection title="Routing Table" icon={Network}>
             <p className="text-xs text-theme-text-muted mb-3 font-mono">
-              host: {typeof window !== 'undefined' ? window.location.hostname : 'localhost'}
+              {isSSLMode()
+                ? `domain: ${import.meta.env.VITE_DREAM_DOMAIN}`
+                : `host: ${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}`}
             </p>
             <div className="space-y-1">
               {services.map((svc) => (
@@ -177,11 +180,11 @@ export default function Settings() {
                   {svc.port ? (
                     <a
                       className="text-sm text-theme-accent-light hover:text-theme-accent-light font-mono transition-colors"
-                      href={`http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:${svc.port}`}
+                      href={getServiceUrl(svc.port)}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      :{svc.port}
+                      {getServiceUrlLabel(svc.port)}
                     </a>
                   ) : (
                     <span className="text-sm text-theme-text-muted font-mono">systemd</span>

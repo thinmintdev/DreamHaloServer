@@ -136,21 +136,41 @@ async def get_llama_metrics(model_hint: Optional[str] = None) -> dict:
 
 async def get_loaded_model() -> Optional[str]:
     """Query llama-server /v1/models for actually loaded model name."""
+    models = await get_all_loaded_models()
+    # Return the active (first loaded) model for backwards compat
+    for m in models:
+        if m.get("active"):
+            return m["id"]
+    return models[0]["id"] if models else None
+
+
+async def get_all_loaded_models() -> list[dict]:
+    """Query llama-server for all currently loaded models.
+
+    Returns a list of dicts: [{"id": "model-name", "active": bool}, ...]
+    Lemonade can serve multiple models simultaneously (--max-loaded-models).
+    """
     try:
         host = SERVICES["llama-server"]["host"]
         port = SERVICES["llama-server"]["port"]
         client = await _get_httpx_client()
         resp = await client.get(f"http://{host}:{port}{_LLM_API_PREFIX}/models")
-        models = resp.json().get("data", [])
-        for m in models:
+        data = resp.json().get("data", [])
+        result = []
+        for m in data:
+            model_id = m.get("id", "")
             status = m.get("status", {})
-            if isinstance(status, dict) and status.get("value") == "loaded":
-                return m.get("id")
-        if models:
-            return models[0].get("id")
+            is_loaded = isinstance(status, dict) and status.get("value") == "loaded"
+            # Include all models that are loaded (skip ones just registered but not in memory)
+            if is_loaded or not isinstance(status, dict):
+                result.append({"id": model_id, "active": is_loaded})
+        # Mark first loaded model as active if none explicitly marked
+        if result and not any(m["active"] for m in result):
+            result[0]["active"] = True
+        return result
     except (httpx.HTTPError, httpx.TimeoutException) as e:
-        logger.debug("get_loaded_model failed: %s", e)
-    return None
+        logger.debug("get_all_loaded_models failed: %s", e)
+        return []
 
 
 async def get_llama_context_size(model_hint: Optional[str] = None) -> Optional[int]:

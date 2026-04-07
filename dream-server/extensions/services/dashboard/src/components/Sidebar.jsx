@@ -7,12 +7,7 @@ import {
 } from 'lucide-react'
 import { getSidebarExternalLinks, getSidebarNavItems } from '../plugins/registry'
 import { useTheme } from '../contexts/ThemeContext'
-
-// Derive external service URLs from current host
-const getExternalUrl = (port) =>
-  typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:${port}`
-    : `http://localhost:${port}`
+import { getServiceUrl } from '../utils/serviceUrls'
 
 export default function Sidebar({ status, collapsed, onToggle }) {
   const { theme, cycleTheme, labels } = useTheme() // eslint-disable-line no-unused-vars -- theme switcher temporarily hidden
@@ -39,7 +34,7 @@ export default function Sidebar({ status, collapsed, onToggle }) {
 
   // Compute external links with auto-auth tokens (e.g. OpenClaw ?token=xxx)
   const externalLinks = useMemo(() => {
-    const links = getSidebarExternalLinks({ status, getExternalUrl, apiLinks })
+    const links = getSidebarExternalLinks({ status, getExternalUrl: getServiceUrl, apiLinks })
     return links.map(link => {
       if (link.key === 'openclaw' && serviceTokens.openclaw) {
         return { ...link, url: `${link.url}/?token=${serviceTokens.openclaw}` }

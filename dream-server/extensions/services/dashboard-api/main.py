@@ -39,7 +39,8 @@ from helpers import (
     get_all_services, get_cached_services, set_services_cache,
     get_disk_usage, get_model_info, get_bootstrap_status,
     get_uptime, get_cpu_metrics, get_ram_metrics,
-    get_llama_metrics, get_loaded_model, get_llama_context_size,
+    get_llama_metrics, get_loaded_model, get_all_loaded_models,
+    get_llama_context_size,
     dir_size_gb,
 )
 from agent_monitor import collect_metrics
@@ -78,7 +79,7 @@ _STORAGE_CACHE_TTL = 30.0
 _SERVICE_POLL_INTERVAL = 10.0  # background health check interval
 
 # --- Router imports ---
-from routers import workflows, features, setup, updates, agents, privacy, extensions, gpu as gpu_router, resources
+from routers import workflows, features, setup, updates, agents, privacy, extensions, gpu as gpu_router, resources, memory
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,7 @@ app.include_router(privacy.router)
 app.include_router(extensions.router)
 app.include_router(gpu_router.router)
 app.include_router(resources.router)
+app.include_router(memory.router)
 
 
 # ================================================================
@@ -316,7 +318,8 @@ async def api_status(api_key: str = Depends(verify_api_key)):
             "disk": {"used_gb": 0, "total_gb": 0, "percent": 0},
             "system": {"uptime": 0, "hostname": os.environ.get("HOSTNAME", "dream-server")},
             "inference": {"tokensPerSecond": 0, "lifetimeTokens": 0,
-                          "loadedModel": None, "contextSize": None},
+                          "loadedModel": None, "loadedModels": [],
+                          "contextSize": None},
             "manifest_errors": MANIFEST_ERRORS,
         }
 
@@ -332,7 +335,7 @@ async def _build_api_status() -> dict:
     (
         gpu_info, model_info, bootstrap_info, uptime,
         cpu_metrics, ram_metrics, disk_info,
-        service_statuses, loaded_model,
+        service_statuses, all_loaded_models,
     ) = await asyncio.gather(
         asyncio.to_thread(get_gpu_info),
         asyncio.to_thread(get_model_info),
@@ -342,8 +345,17 @@ async def _build_api_status() -> dict:
         asyncio.to_thread(get_ram_metrics),
         asyncio.to_thread(get_disk_usage),
         _get_services(),
-        get_loaded_model(),
+        get_all_loaded_models(),
     )
+
+    # Derive active model from loaded models list
+    loaded_model = None
+    for m in all_loaded_models:
+        if m.get("active"):
+            loaded_model = m["id"]
+            break
+    if not loaded_model and all_loaded_models:
+        loaded_model = all_loaded_models[0]["id"]
 
     # Second fan-out: llama metrics + context size (need loaded_model)
     llama_metrics_data, context_size = await asyncio.gather(
@@ -418,6 +430,7 @@ async def _build_api_status() -> dict:
             "tokensPerSecond": llama_metrics_data.get("tokens_per_second", 0),
             "lifetimeTokens": llama_metrics_data.get("lifetime_tokens", 0),
             "loadedModel": loaded_model or (model_data["name"] if model_data else None),
+            "loadedModels": all_loaded_models,
             "contextSize": context_size or (model_data["contextLength"] if model_data else None),
         },
         "manifest_errors": MANIFEST_ERRORS,
