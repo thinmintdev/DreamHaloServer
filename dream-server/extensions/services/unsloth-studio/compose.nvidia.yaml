@@ -1,0 +1,29 @@
+services:
+  unsloth-studio:
+    image: unslothai/unsloth-studio:latest
+    container_name: dream-unsloth-studio
+    restart: unless-stopped
+    shm_size: '8g'
+    volumes:
+      - "${AI_MODELS_PATH:-./data/models}:/models"
+      - ./data/unsloth-studio:/workspace
+    ports:
+      - "0.0.0.0:${UNSLOTH_PORT:-7680}:7680"
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 64G
+        reservations:
+          cpus: '2.0'
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:7680/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

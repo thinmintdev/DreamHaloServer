@@ -1,0 +1,38 @@
+services:
+  unsloth-studio:
+    image: unslothai/unsloth-studio:latest
+    container_name: dream-unsloth-studio
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
+      - /dev/kfd:/dev/kfd
+    group_add:
+      - "${VIDEO_GID:-44}"
+      - "${RENDER_GID:-992}"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '8g'
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.5.1
+      - ROCBLAS_USE_HIPBLASLT=0
+    volumes:
+      - "${AI_MODELS_PATH:-./data/models}:/models"
+      - ./data/unsloth-studio:/workspace
+    ports:
+      - "0.0.0.0:${UNSLOTH_PORT:-7680}:7680"
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 64G
+        reservations:
+          cpus: '2.0'
+          memory: 8G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:7680/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
