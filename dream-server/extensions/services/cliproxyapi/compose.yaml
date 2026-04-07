@@ -1,0 +1,27 @@
+services:
+  cliproxyapi:
+    image: eceasy/cli-proxy-api:latest
+    container_name: dream-cliproxyapi
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./data/cliproxyapi/config.yaml:/CLIProxyAPI/config.yaml
+      - ./data/cliproxyapi/auths:/root/.cli-proxy-api
+      - ./data/cliproxyapi/logs:/CLIProxyAPI/logs
+    ports:
+      - "0.0.0.0:${CLIPROXYAPI_PORT:-8317}:8317"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8317/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

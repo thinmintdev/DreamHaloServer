@@ -3,8 +3,8 @@
 # Dream Server Installer — Phase 14: DreamHalo Configuration
 # ============================================================================
 # Part of: installers/phases/
-# Purpose: Configure DreamHalo-specific services (9Router, model-manager,
-#          unsloth-studio) and set DREAM_MODE=dreamhalo when 9Router is enabled
+# Purpose: Configure DreamHalo-specific services (CLIProxyAPI, model-manager,
+#          unsloth-studio) and set DREAM_MODE=dreamhalo when proxy is enabled
 #
 # Expects: DRY_RUN, INSTALL_DIR, INTERACTIVE, ENABLE_OPENCLAW,
 #          GPU_BACKEND, log(), success(), warn()
@@ -17,7 +17,7 @@
 
 log "Checking DreamHalo extensions..."
 
-ENABLE_9ROUTER="${ENABLE_9ROUTER:-false}"
+ENABLE_CLIPROXYAPI="${ENABLE_CLIPROXYAPI:-false}"
 ENABLE_MODEL_MANAGER="${ENABLE_MODEL_MANAGER:-false}"
 ENABLE_UNSLOTH="${ENABLE_UNSLOTH:-false}"
 
@@ -26,8 +26,8 @@ if $INTERACTIVE; then
     log "=== DreamHalo Extensions ==="
     echo ""
 
-    read -rp "Enable 9Router (Claude API proxy via LiteLLM)? [y/N] " REPLY
-    [[ $REPLY =~ ^[Yy]$ ]] && ENABLE_9ROUTER=true
+    read -rp "Enable CLI Proxy API (Claude/Gemini proxy via OAuth)? [y/N] " REPLY
+    [[ $REPLY =~ ^[Yy]$ ]] && ENABLE_CLIPROXYAPI=true
 
     read -rp "Enable Model Manager (browse/load/download models)? [Y/n] " REPLY
     [[ $REPLY =~ ^[Nn]$ ]] || ENABLE_MODEL_MANAGER=true
@@ -36,30 +36,29 @@ if $INTERACTIVE; then
     [[ $REPLY =~ ^[Yy]$ ]] && ENABLE_UNSLOTH=true
 fi
 
-# --- 9Router ---
-if [[ "$ENABLE_9ROUTER" == "true" ]]; then
-    log "Enabling 9Router extension..."
-    NINEROUTER_COMPOSE="$INSTALL_DIR/extensions/services/9router/compose.yaml"
-    if [[ -f "${NINEROUTER_COMPOSE}.disabled" ]]; then
-        $DRY_RUN || mv "${NINEROUTER_COMPOSE}.disabled" "$NINEROUTER_COMPOSE"
+# --- CLI Proxy API ---
+if [[ "$ENABLE_CLIPROXYAPI" == "true" ]]; then
+    log "Enabling CLI Proxy API extension..."
+    CLIPROXYAPI_COMPOSE="$INSTALL_DIR/extensions/services/cliproxyapi/compose.yaml"
+    if [[ -f "${CLIPROXYAPI_COMPOSE}.disabled" ]]; then
+        $DRY_RUN || mv "${CLIPROXYAPI_COMPOSE}.disabled" "$CLIPROXYAPI_COMPOSE"
     fi
 
-    # Prompt for API key if not already set
-    if $INTERACTIVE && [[ -z "${NINEROUTER_API_KEY:-}" ]]; then
-        echo ""
-        read -rp "Enter your 9Router/Anthropic API key (or press Enter to skip): " NINEROUTER_API_KEY
-        if [[ -n "$NINEROUTER_API_KEY" ]]; then
-            $DRY_RUN || echo "NINEROUTER_API_KEY=$NINEROUTER_API_KEY" >> "$INSTALL_DIR/.env"
-            log "9Router API key saved to .env"
-        else
-            warn "No API key provided — set NINEROUTER_API_KEY in .env before starting 9Router"
-        fi
+    # Create data directories for persistent auth/config
+    $DRY_RUN || mkdir -p "$INSTALL_DIR/data/cliproxyapi/auths" \
+                         "$INSTALL_DIR/data/cliproxyapi/logs"
+    # Create default config if missing
+    if [[ ! -f "$INSTALL_DIR/data/cliproxyapi/config.yaml" ]]; then
+        $DRY_RUN || cat > "$INSTALL_DIR/data/cliproxyapi/config.yaml" << 'CFGEOF'
+# CLI Proxy API config — see https://github.com/router-for-me/CLIProxyAPI
+CFGEOF
     fi
 
     # Switch LiteLLM to dreamhalo config
     $DRY_RUN || sed -i 's/^DREAM_MODE=.*/DREAM_MODE=dreamhalo/' "$INSTALL_DIR/.env" 2>/dev/null \
         || echo "DREAM_MODE=dreamhalo" >> "$INSTALL_DIR/.env"
-    success "9Router enabled — LiteLLM set to dreamhalo mode (Claude Sonnet 4.6 default)"
+    success "CLI Proxy API enabled — LiteLLM set to dreamhalo mode"
+    log "After starting, authenticate with: docker exec -it dream-cliproxyapi /CLIProxyAPI/CLIProxyAPI -no-browser --claude-login"
 
     # Switch OpenClaw to dreamhalo config if openclaw is enabled
     if [[ "$ENABLE_OPENCLAW" == "true" ]]; then
@@ -69,7 +68,7 @@ if [[ "$ENABLE_9ROUTER" == "true" ]]; then
         success "OpenClaw set to dreamhalo agent config"
     fi
 else
-    log "9Router not enabled — keeping default DREAM_MODE"
+    log "CLI Proxy API not enabled — keeping default DREAM_MODE"
 fi
 
 # --- Model Manager ---

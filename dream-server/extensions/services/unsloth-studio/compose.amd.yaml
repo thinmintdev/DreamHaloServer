@@ -1,6 +1,6 @@
 services:
   unsloth-studio:
-    image: unslothai/unsloth-studio:latest
+    image: unsloth/unsloth:latest
     container_name: dream-unsloth-studio
     restart: unless-stopped
     devices:
