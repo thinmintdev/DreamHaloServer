@@ -11,6 +11,7 @@ services:
       - ./data/cliproxyapi/logs:/CLIProxyAPI/logs
     ports:
       - "0.0.0.0:${CLIPROXYAPI_PORT:-8317}:8317"
+      - "0.0.0.0:54545:54545"
     deploy:
       resources:
         limits:
