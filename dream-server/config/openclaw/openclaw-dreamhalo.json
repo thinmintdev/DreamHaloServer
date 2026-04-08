@@ -192,13 +192,23 @@
     }
   },
   "gateway": {
-    "host": "0.0.0.0",
-    "port": 7860,
+    "bind": "lan",
     "auth": {
-      "mode": "password"
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "X-Forwarded-For"
+      }
     },
-    "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+    "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"],
     "controlUi": {
+      "allowedOrigins": [
+        "https://__OPENCLAW_DOMAIN__",
+        "wss://__OPENCLAW_DOMAIN__",
+        "http://localhost:7860",
+        "ws://localhost:7860",
+        "http://localhost:18789",
+        "ws://localhost:18789"
+      ],
       "allowInsecureAuth": true,
       "dangerouslyDisableDeviceAuth": true,
       "dangerouslyAllowHostHeaderOriginFallback": true
