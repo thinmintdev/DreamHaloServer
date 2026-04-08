@@ -180,6 +180,9 @@ services:
       - ./data:/data
       - ./config/openclaw/workspace:/openclaw-workspaces/workspace
       - ./config/openclaw/workspace-mintops:/openclaw-workspaces/workspace-mintops
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    group_add:
+      - "${DOCKER_GID:-991}"
     deploy:
       resources:
         limits:
