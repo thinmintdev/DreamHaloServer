@@ -8,6 +8,7 @@ import {
   Clock,
   Brain,
   Brackets,
+  Layers,
   MessageSquare,
   Mic,
   FileText,
@@ -17,10 +18,50 @@ import {
   ChevronRight,
   CircleHelp,
 } from 'lucide-react'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useRef, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FeatureDiscoveryBanner } from '../components/FeatureDiscovery'
 import { getServiceUrl } from '../utils/serviceUrls'
+
+// ============================================================================
+// Inference data polling (same pattern as standalone InferenceAnalytics page)
+// ============================================================================
+
+function useInferenceData() {
+  const [metrics, setMetrics] = useState(null)
+  const [history, setHistory] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const fetchInFlight = useRef(false)
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      if (document.hidden || fetchInFlight.current) return
+      fetchInFlight.current = true
+      try {
+        const [mRes, hRes, sRes] = await Promise.all([
+          fetch('/api/inference/metrics'),
+          fetch('/api/inference/history'),
+          fetch('/api/inference/summary'),
+        ])
+        if (mRes.ok) setMetrics(await mRes.json())
+        if (hRes.ok) setHistory(await hRes.json())
+        if (sRes.ok) setSummary(await sRes.json())
+      } catch {
+        // Inference data degrades gracefully — dashboard still shows system status
+      } finally {
+        fetchInFlight.current = false
+      }
+    }
+
+    fetchAll()
+    const interval = setInterval(fetchAll, 5000)
+    const onVis = () => { if (!document.hidden) fetchAll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis) }
+  }, [])
+
+  return { metrics, history, summary }
+}
 
 // Compute overall health from services (excludes not_deployed from counts)
 function computeHealth(services) {
@@ -102,68 +143,42 @@ function formatUptime(seconds) {
   return `${m}m`
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
+function shortModelName(id) {
+  if (!id) return '--'
+  let name = id.replace(/^(extra|user)\./i, '').replace(/\.gguf$/i, '')
+  name = name.replace(/[-_](UD[-_])?[A-Z0-9]+_K(_[A-Z0-9]+)?$/i, '')
+    .replace(/[-_]MXFP\d+(_MOE)?$/i, '')
+  return name || id
 }
 
-function buildSignalPath(points) {
-  if (!points.length) return ''
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
-
-  let path = `M ${points[0].x} ${points[0].y}`
-
-  for (let i = 1; i < points.length - 1; i += 1) {
-    const xc = (points[i].x + points[i + 1].x) / 2
-    const yc = (points[i].y + points[i + 1].y) / 2
-    path += ` Q ${points[i].x} ${points[i].y} ${xc} ${yc}`
-  }
-
-  const penultimate = points[points.length - 2]
-  const last = points[points.length - 1]
-  path += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`
-
-  return path
-}
-
-function buildTokenSamples(tokensPerSecond) {
-  const base = Math.max(tokensPerSecond || 8, 8)
-  const pattern = [0.58, 0.66, 0.62, 0.79, 0.73, 0.88, 0.82, 0.92, 1]
-
-  return pattern.map((multiplier, index) => {
-    const value = base * multiplier
-    return Number((index === pattern.length - 1 ? base : value).toFixed(1))
-  })
-}
-
-function buildGeneratedTokenSamples(totalTokens) {
-  const total = Math.max(totalTokens || 1200, 1200)
-  const pattern = [0.14, 0.22, 0.31, 0.43, 0.57, 0.68, 0.79, 0.9, 1]
-
-  return pattern.map((multiplier, index) => {
-    const value = total * multiplier
-    return Math.round(index === pattern.length - 1 ? total : value)
-  })
-}
-
-function buildChartPoints(values, maxValue) {
-  const width = 430
-  const height = 170
-  const paddingX = 20
-  const paddingY = 18
-  const usableWidth = width - paddingX * 2
-  const usableHeight = height - paddingY * 2
-
-  return values.map((value, index) => {
-    const ratio = clamp(maxValue > 0 ? value / maxValue : 0, 0.08, 0.94)
-    return {
-      x: paddingX + (usableWidth / (values.length - 1)) * index,
-      y: height - paddingY - ratio * usableHeight,
-    }
-  })
-}
+const MAX_HISTORY_PTS = 60
 
 export default function Dashboard({ status, loading }) {
+  const { metrics: infMetrics, history: infHistory, summary: infSummary } = useInferenceData()
   const [featuresData, setFeaturesData] = useState(null)
+
+  // Client-side rolling history built from the working /api/status source.
+  // infHistory.tps is always 0 because inference.py's rate computation breaks;
+  // status.inference.tokensPerSecond is the already-working path via helpers.py.
+  const localHistoryRef = useRef({ timestamps: [], tps: [], kvCache: [], requests: [] })
+  const [localHistory, setLocalHistory] = useState({ timestamps: [], tps: [], kvCache: [], requests: [] })
+
+  useEffect(() => {
+    if (!status) return
+    const h = localHistoryRef.current
+    const now = new Date().toISOString()
+    const tps = status?.inference?.tokensPerSecond ?? 0
+    const kvCache = infMetrics?.kv_cache_usage_ratio != null
+      ? infMetrics.kv_cache_usage_ratio * 100
+      : 0
+    const requests = infMetrics?.active_requests ?? 0
+
+    h.timestamps = [...h.timestamps, now].slice(-MAX_HISTORY_PTS)
+    h.tps = [...h.tps, tps].slice(-MAX_HISTORY_PTS)
+    h.kvCache = [...h.kvCache, kvCache].slice(-MAX_HISTORY_PTS)
+    h.requests = [...h.requests, requests].slice(-MAX_HISTORY_PTS)
+    setLocalHistory({ ...h })
+  }, [status, infMetrics])
 
   useEffect(() => {
     let mounted = true
@@ -211,111 +226,6 @@ export default function Dashboard({ status, loading }) {
 
   const health = computeHealth(status?.services)
   const servicesSorted = sortBySeverity(status?.services)
-  const serviceGroups = [
-    {
-      key: 'online',
-      label: 'Online',
-      tone: 'online',
-      services: servicesSorted.filter(service => service.status === 'healthy'),
-    },
-    {
-      key: 'degraded',
-      label: 'Degraded',
-      tone: 'degraded',
-      services: servicesSorted.filter(service => service.status === 'degraded'),
-    },
-    {
-      key: 'inactive',
-      label: 'Inactive',
-      tone: 'inactive',
-      services: servicesSorted.filter(service => ['down', 'unhealthy', 'unknown'].includes(service.status)),
-    },
-  ]
-  const systemMetrics = []
-
-  if (status?.gpu) {
-    systemMetrics.push({
-      icon: Activity,
-      label: 'GPU',
-      value: `${status.gpu.utilization}%`,
-      subvalue: status.gpu.name.replace('NVIDIA ', '').replace('AMD ', ''),
-      percent: status.gpu.utilization,
-    })
-
-    if (status.gpu.memoryType === 'unified') {
-      if (status?.ram) {
-        systemMetrics.push({
-          icon: HardDrive,
-          label: 'Mem Used',
-          value: `${status.ram.used_gb} GB`,
-          subvalue: `of ${status.ram.total_gb} GB`,
-          percent: status.ram.percent,
-        })
-      }
-    } else {
-      systemMetrics.push({
-        icon: HardDrive,
-        label: 'VRAM',
-        value: `${status.gpu.vramUsed.toFixed(1)} GB`,
-        subvalue: `of ${status.gpu.vramTotal} GB`,
-        percent: (status.gpu.vramUsed / status.gpu.vramTotal) * 100,
-      })
-    }
-  }
-
-  if (status?.cpu) {
-    systemMetrics.push({
-      icon: Cpu,
-      label: 'CPU',
-      value: `${status.cpu.percent}%`,
-      subvalue: 'utilization',
-      percent: status.cpu.percent,
-    })
-  }
-
-  if (status?.ram && status?.gpu?.memoryType !== 'unified') {
-    systemMetrics.push({
-      icon: HardDrive,
-      label: 'RAM',
-      value: `${status.ram.used_gb} GB`,
-      subvalue: `of ${status.ram.total_gb} GB`,
-      percent: status.ram.percent,
-    })
-  }
-
-  if (status?.gpu?.powerDraw != null) {
-    systemMetrics.push({
-      icon: Power,
-      label: 'GPU Power',
-      value: `${status.gpu.powerDraw}W`,
-      subvalue: 'live',
-    })
-  }
-
-  systemMetrics.push(
-    {
-      icon: Thermometer,
-      label: 'GPU Temp',
-      value: status?.gpu?.temperature != null ? `${status.gpu.temperature}°C` : '—',
-      subvalue: status?.gpu?.temperature != null
-        ? status.gpu.temperature < 70 ? 'normal' : status.gpu.temperature < 85 ? 'warm' : 'hot'
-        : 'thermal',
-      alert: status?.gpu?.temperature >= 85,
-    },
-    {
-      icon: Brackets,
-      label: 'Context',
-      value: status?.inference?.contextSize ? `${(status.inference.contextSize / 1024).toFixed(0)}k` : '—',
-      subvalue: 'max tokens',
-    },
-    {
-      icon: Clock,
-      label: 'Uptime',
-      value: formatUptime(status?.uptime || 0),
-      subvalue: 'system',
-    }
-  )
-
   // Model stack — show all loaded models (Lemonade multi-model support)
   const loadedModels = status?.inference?.loadedModels || []
   const activeModel = status?.inference?.loadedModel || null
@@ -340,37 +250,6 @@ export default function Dashboard({ status, loading }) {
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
 
-      {/* Feature Cards */}
-      <div className="liquid-metal-sequence-grid liquid-metal-sequence-grid--features grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 mb-10">
-        {features.length > 0 ? (
-          features.map(feature => (
-            <FeatureCard
-              key={feature.id}
-              icon={FEATURE_ICONS[feature.icon] || MessageSquare}
-              title={feature.name}
-              description={feature.description}
-              href={pickFeatureLink(feature, status?.services)}
-              status={normalizeFeatureStatus(feature.status)}
-              hint={
-                feature.status === 'services_needed'
-                  ? `Needs services: ${(feature.requirements?.servicesMissing || []).join(', ')}`
-                  : feature.status === 'insufficient_vram'
-                    ? `Needs ${feature.requirements?.vramGb || 0}GB VRAM`
-                    : undefined
-              }
-            />
-          ))
-        ) : (
-          <FeatureCard
-            icon={MessageSquare}
-            title="AI Chat"
-            description="Feature metadata is loading..."
-            href={null}
-            status="disabled"
-            hint="Waiting for /api/features"
-          />
-        )}
-      </div>
 
       {/* Multi-GPU summary strip — only shown when gpu_count > 1 */}
       {status?.gpu?.gpu_count > 1 && (
@@ -397,54 +276,83 @@ export default function Dashboard({ status, loading }) {
         </Link>
       )}
 
-      {/* System Status */}
-      <h2 className="text-lg font-semibold text-theme-text mb-5">System Status</h2>
-      <div className="rounded-2xl border border-white/8 bg-black/[0.14] px-4 py-4 mb-10">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] gap-4 xl:items-start">
-          <div className="min-w-0 xl:border-r xl:border-white/8 xl:pr-4">
-            <TokenSignalPanel
-              tokensPerSecond={status?.inference?.tokensPerSecond || 0}
-              totalTokens={status?.inference?.lifetimeTokens || 0}
-              gpuTemp={status?.gpu?.temperature}
-              cpuTemp={status?.cpu?.temp_c}
-              memFree={status?.ram ? Math.max(status.ram.total_gb - status.ram.used_gb, 0) : null}
-              contextValue={status?.inference?.contextSize ? `${(status.inference.contextSize / 1024).toFixed(0)}k` : '—'}
-            />
+      {/* Inference & System Telemetry */}
+      <h2 className="text-lg font-semibold text-theme-text mb-5">System Telemetry</h2>
+
+      {/* Summary cards — inference + system metrics combined */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+        <InferenceSummaryCard icon={Zap} label="Tokens/sec" value={infMetrics?.tokens_per_second || status?.inference?.tokensPerSecond || '--'} subvalue="generation speed" />
+        <InferenceSummaryCard icon={Zap} label="Prompt tok/s" value={infMetrics?.prompt_tokens_per_second || '--'} subvalue="prompt processing" />
+        <InferenceSummaryCard icon={Layers} label="KV Cache" value={infMetrics?.kv_cache_usage_ratio != null ? `${(infMetrics.kv_cache_usage_ratio * 100).toFixed(1)}%` : '--'} subvalue="context utilization" />
+        <InferenceSummaryCard icon={Activity} label="Lifetime" value={formatTokenCount(infSummary?.lifetime_tokens || status?.inference?.lifetimeTokens || 0)} subvalue="total generated" />
+        <InferenceSummaryCard icon={Brain} label="Model" value={infSummary?.active_model ? shortModelName(infSummary.active_model) : (activeModel ? shortModelName(activeModel) : '--')} subvalue={status?.inference?.contextSize ? `${(status.inference.contextSize / 1024).toFixed(0)}k context` : ''} />
+        <InferenceSummaryCard icon={Clock} label="Uptime" value={formatUptime(status?.uptime || 0)} subvalue="system" />
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+        {status?.gpu && (
+          <InferenceSummaryCard icon={Activity} label="GPU" value={`${status.gpu.utilization}%`} subvalue={status.gpu.name.replace('NVIDIA ', '').replace('AMD ', '')} percent={status.gpu.utilization} />
+        )}
+        {status?.gpu?.memoryType === 'unified' ? (
+          status?.ram && <InferenceSummaryCard icon={HardDrive} label="Mem Used" value={`${status.ram.used_gb} GB`} subvalue={`of ${status.ram.total_gb} GB`} percent={status.ram.percent} />
+        ) : (
+          status?.gpu && <InferenceSummaryCard icon={HardDrive} label="VRAM" value={`${status.gpu.vramUsed.toFixed(1)} GB`} subvalue={`of ${status.gpu.vramTotal} GB`} percent={(status.gpu.vramUsed / status.gpu.vramTotal) * 100} />
+        )}
+        {status?.cpu && (
+          <InferenceSummaryCard icon={Cpu} label="CPU" value={`${status.cpu.percent}%`} subvalue="utilization" percent={status.cpu.percent} />
+        )}
+        {status?.ram && status?.gpu?.memoryType !== 'unified' && (
+          <InferenceSummaryCard icon={HardDrive} label="RAM" value={`${status.ram.used_gb} GB`} subvalue={`of ${status.ram.total_gb} GB`} percent={status.ram.percent} />
+        )}
+        {status?.gpu?.powerDraw != null && (
+          <InferenceSummaryCard icon={Power} label="GPU Power" value={`${status.gpu.powerDraw}W`} subvalue="live" />
+        )}
+        <InferenceSummaryCard icon={Thermometer} label="GPU Temp" value={status?.gpu?.temperature != null ? `${status.gpu.temperature}°C` : '—'} subvalue={status?.gpu?.temperature != null ? (status.gpu.temperature < 70 ? 'normal' : status.gpu.temperature < 85 ? 'warm' : 'hot') : 'thermal'} alert={status?.gpu?.temperature >= 85} />
+      </div>
+
+      {/* Speculative decoding banner */}
+      {infMetrics?.draft_acceptance_pct != null && (
+        <div className="mb-6 p-3 bg-theme-card border border-theme-border rounded-xl flex items-center gap-3">
+          <div className="p-2 bg-theme-accent/10 rounded-lg">
+            <Zap size={16} className="text-theme-accent" />
           </div>
-          <div className="self-start space-y-1.5">
-            <div className="liquid-metal-sequence-grid liquid-metal-sequence-grid--system grid grid-cols-2 gap-1.5">
-              {systemMetrics.map((metric) => (
-                <MetricCard
-                  key={metric.label}
-                  icon={metric.icon}
-                  label={metric.label}
-                  value={metric.value}
-                  subvalue={metric.subvalue}
-                  percent={metric.percent}
-                  alert={metric.alert}
-                  compact
-                />
-              ))}
-            </div>
-            <ModelStackPanel models={loadedModels} activeModel={activeModel} />
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-theme-text">Speculative Decoding Active</p>
+            <p className="text-[10px] text-theme-text-muted">
+              Draft acceptance: <span className="font-mono text-theme-accent">{infMetrics.draft_acceptance_pct}%</span>
+              {' '}&middot;{' '}
+              Drafted: <span className="font-mono">{formatTokenCount(infMetrics?.tokens_drafted_total || 0)}</span>
+              {' '}&middot;{' '}
+              Accepted: <span className="font-mono">{formatTokenCount(infMetrics?.tokens_drafted_accepted_total || 0)}</span>
+            </p>
           </div>
         </div>
+      )}
+
+      {/* Time-series charts — sourced from client-side history via /api/status (working path) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <DashTimeSeriesChart timestamps={localHistory.timestamps} values={localHistory.tps} label="Tokens / sec" unit="t/s" color="#818cf8" />
+        <DashTimeSeriesChart timestamps={localHistory.timestamps} values={localHistory.kvCache} label="KV Cache Utilization" unit="%" color="#34d399" maxOverride={100} />
+        <DashTimeSeriesChart timestamps={localHistory.timestamps} values={localHistory.requests} label="Active Requests" unit="" color="#fb923c" />
       </div>
 
-      {/* Services Grid — sorted by severity */}
+      {/* Model stack + Prometheus metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4 mb-10">
+        <ModelStackPanel models={loadedModels} activeModel={activeModel} summary={infSummary} contextSize={status?.inference?.contextSize || infSummary?.context_size} />
+        <PrometheusTable allMetrics={infMetrics?.all_metrics} />
+      </div>
+
+      {/* Services */}
       <h2 className="text-lg font-semibold text-theme-text mb-5">Services</h2>
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mb-12 items-start">
-        {serviceGroups.map((group) => (
-          <ServiceGroup
-            key={group.key}
-            label={group.label}
-            tone={group.tone}
-            services={group.services}
-          />
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-12">
+        {servicesSorted.map(service => (
+          <ServiceCard key={service.name} service={service} />
         ))}
+        {servicesSorted.length === 0 && (
+          <p className="col-span-6 text-xs text-theme-text-muted">Waiting for service telemetry...</p>
+        )}
       </div>
 
-      {/* Feature Discovery is already shown at the top */}
     </div>
   )
 }
@@ -525,289 +433,11 @@ const FeatureCard = memo(function FeatureCard({ icon: Icon, title, description, 
   return <Link to={href} className="block h-full liquid-metal-sequence-slot">{content}</Link>
 })
 
-const TokenSignalPanel = memo(function TokenSignalPanel({
-  tokensPerSecond,
-  totalTokens,
-  gpuTemp,
-  cpuTemp,
-  memFree,
-  contextValue,
-}) {
-  const throughputSeries = useMemo(() => buildTokenSamples(tokensPerSecond), [tokensPerSecond])
-  const generatedSeries = useMemo(() => buildGeneratedTokenSamples(totalTokens), [totalTokens])
+// ============================================================================
+// Inference-styled summary card
+// ============================================================================
 
-  return (
-    <div className="min-w-0">
-      <div className="mb-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-theme-text-muted/70">
-          Signal Graph
-        </p>
-        <h3 className="mt-1 text-base font-semibold text-theme-text">
-          Inference telemetry
-        </h3>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-theme-text-secondary">
-          Context {contextValue}
-        </p>
-      </div>
-
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        <div className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-theme-text-secondary">
-          GPU Temp {gpuTemp != null ? `${gpuTemp}°C` : '—'}
-        </div>
-        <div className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-theme-text-secondary">
-          CPU Temp {cpuTemp != null ? `${cpuTemp}°C` : 'Unavailable'}
-        </div>
-        <div className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-theme-text-secondary">
-          Mem Free {memFree != null ? `${memFree.toFixed(1)} GB` : '—'}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
-        <InteractiveSignalChart
-          chartId="throughput"
-          title="Tokens per second"
-          description="Live throughput"
-          values={throughputSeries}
-          currentDisplay={`${tokensPerSecond || 0}`}
-          accent="rgba(138,44,255,0.94)"
-          valueFormatter={(value) => `${Number(value).toFixed(1)}`}
-          axisFormatter={(value) => `${Math.round(value)}`}
-        />
-        <InteractiveSignalChart
-          chartId="generated"
-          title="Tokens generated"
-          description="Accumulated output"
-          values={generatedSeries}
-          currentDisplay={formatTokenCount(totalTokens || 0)}
-          accent="rgba(255,184,108,0.94)"
-          valueFormatter={(value) => formatTokenCount(Math.round(value))}
-          axisFormatter={(value) => formatTokenCount(Math.round(value))}
-        />
-      </div>
-    </div>
-  )
-})
-
-const InteractiveSignalChart = memo(function InteractiveSignalChart({
-  chartId,
-  title,
-  description,
-  values,
-  currentDisplay,
-  accent,
-  valueFormatter,
-  axisFormatter,
-}) {
-  const [selectedProgress, setSelectedProgress] = useState(1)
-  const [dragging, setDragging] = useState(false)
-
-  useEffect(() => {
-    setSelectedProgress(1)
-  }, [values])
-
-  const maxValue = Math.max(...values, 12) * 1.12
-  const points = buildChartPoints(values, maxValue)
-  const path = buildSignalPath(points)
-  const rawIndex = selectedProgress * Math.max(points.length - 1, 1)
-  const lowerIndex = Math.floor(rawIndex)
-  const upperIndex = Math.min(lowerIndex + 1, points.length - 1)
-  const interpolation = rawIndex - lowerIndex
-  const lowerPoint = points[lowerIndex] || points[0] || { x: 0, y: 0 }
-  const upperPoint = points[upperIndex] || lowerPoint
-  const selectedPoint = {
-    x: lowerPoint.x + (upperPoint.x - lowerPoint.x) * interpolation,
-    y: lowerPoint.y + (upperPoint.y - lowerPoint.y) * interpolation,
-  }
-  const lowerValue = values[lowerIndex] ?? values[0] ?? 0
-  const upperValue = values[upperIndex] ?? lowerValue
-  const selectedValue = lowerValue + (upperValue - lowerValue) * interpolation
-  const bubbleWidth = 82
-  const bubbleHeight = 28
-  const bubbleX = clamp(selectedPoint.x - bubbleWidth / 2, 10, 430 - bubbleWidth - 10)
-  const bubbleY = clamp(selectedPoint.y - 50, 8, 170 - bubbleHeight - 8)
-
-  const updateSelection = (clientX, element) => {
-    const rect = element.getBoundingClientRect()
-    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1)
-    setSelectedProgress(ratio)
-  }
-
-  return (
-    <div className="min-w-0 border-t border-white/8 pt-2 xl:border-t-0 xl:pt-0 xl:first:border-r xl:first:border-white/8 xl:first:pr-4 xl:last:pl-1">
-      <div className="mb-2 flex items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-theme-text">{title}</p>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-theme-text-muted/55">{description}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-theme-text">{currentDisplay}</p>
-        </div>
-      </div>
-
-      <svg
-        viewBox="0 0 430 170"
-        preserveAspectRatio="xMinYMid meet"
-        className="block h-[144px] w-full max-w-[430px] touch-none select-none overflow-visible"
-        onPointerDown={(event) => {
-          setDragging(true)
-          updateSelection(event.clientX, event.currentTarget)
-          event.currentTarget.setPointerCapture?.(event.pointerId)
-        }}
-        onPointerMove={(event) => {
-          if (dragging) {
-            updateSelection(event.clientX, event.currentTarget)
-          }
-        }}
-        onPointerUp={(event) => {
-          setDragging(false)
-          event.currentTarget.releasePointerCapture?.(event.pointerId)
-        }}
-        onPointerLeave={() => setDragging(false)}
-      >
-        <defs>
-          <linearGradient id={`signal-line-${chartId}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={accent} stopOpacity="0.66" />
-            <stop offset="55%" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="100%" stopColor={accent} stopOpacity="0.96" />
-          </linearGradient>
-          <filter id={`signal-glow-${chartId}`} x="-25%" y="-40%" width="150%" height="180%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {[28, 58, 88, 118, 148].map((y) => (
-          <line
-            key={`${chartId}-grid-${y}`}
-            x1="20"
-            x2="410"
-            y1={y}
-            y2={y}
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1"
-          />
-        ))}
-
-        {[0, Math.round(maxValue / 2), Math.round(maxValue)].map((label, index) => (
-          <text
-            key={`${chartId}-label-${label}`}
-            x="0"
-            y={index === 0 ? 150 : index === 1 ? 89 : 29}
-            fill="rgba(255,255,255,0.55)"
-            fontSize="10"
-            fontWeight={index === 0 ? '700' : '500'}
-          >
-            {axisFormatter(label)}
-          </text>
-        ))}
-
-        <path
-          d={path}
-          fill="none"
-          stroke={`url(#signal-line-${chartId})`}
-          strokeWidth="4"
-          strokeLinecap="round"
-          filter={`url(#signal-glow-${chartId})`}
-          style={{ transition: dragging ? 'none' : 'all 220ms ease' }}
-        />
-
-        <line
-          x1={selectedPoint.x}
-          x2={selectedPoint.x}
-          y1={bubbleY + bubbleHeight}
-          y2={selectedPoint.y}
-          stroke="rgba(255,255,255,0.72)"
-          strokeWidth="1.2"
-          style={{ transition: dragging ? 'none' : 'all 180ms ease' }}
-        />
-
-        <g transform={`translate(${bubbleX}, ${bubbleY})`}>
-          <rect width={bubbleWidth} height={bubbleHeight} rx="14" fill="#ffffff" />
-          <text
-            x={bubbleWidth / 2}
-            y="18"
-            textAnchor="middle"
-            fontSize="11"
-            fontWeight="700"
-            fill="#0f0f13"
-          >
-            {valueFormatter(selectedValue)}
-          </text>
-        </g>
-
-        <circle cx={selectedPoint.x} cy={selectedPoint.y} r="7" fill="#ffffff" style={{ transition: dragging ? 'none' : 'all 180ms ease' }} />
-        <circle
-          cx={selectedPoint.x}
-          cy={selectedPoint.y}
-          r={dragging ? '18' : '14'}
-          fill="rgba(255,255,255,0.08)"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="8"
-          style={{ transition: dragging ? 'none' : 'all 180ms ease' }}
-        />
-      </svg>
-    </div>
-  )
-})
-
-const ModelStackPanel = memo(function ModelStackPanel({ models, activeModel }) {
-  // Shorten model names for display: "extra.Qwen3-Coder-Next-MXFP4_MOE.gguf" → "Qwen3-Coder-Next"
-  const shortName = (id) => {
-    if (!id) return '—'
-    let name = id.replace(/^(extra|user)\./i, '').replace(/\.gguf$/i, '')
-    // Strip quantization suffixes like -Q4_K_M, -MXFP4_MOE, -UD-Q4_K_XL
-    name = name.replace(/[-_](UD[-_])?[A-Z0-9]+_K(_[A-Z0-9]+)?$/i, '')
-      .replace(/[-_]MXFP\d+(_MOE)?$/i, '')
-    return name || id
-  }
-
-  if (!models?.length && !activeModel) {
-    return (
-      <div className="liquid-metal-frame liquid-metal-frame--soft bg-theme-card border border-theme-border rounded-xl px-2.5 py-2">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Brain size={12} className="text-theme-text-muted/50" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted/55">Model Stack</span>
-        </div>
-        <p className="text-[11px] text-theme-text-muted/70">No models loaded</p>
-      </div>
-    )
-  }
-
-  const displayModels = models?.length ? models : (activeModel ? [{ id: activeModel, active: true }] : [])
-
-  return (
-    <div className="liquid-metal-frame liquid-metal-frame--soft bg-theme-card border border-theme-border rounded-xl px-2.5 py-2">
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-1.5">
-          <Brain size={12} className="text-theme-text-muted/50" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted/55">Model Stack</span>
-        </div>
-        <span className="text-[9px] font-mono text-theme-text-muted/50">{displayModels.length} loaded</span>
-      </div>
-      <div className="space-y-1">
-        {displayModels.map((model) => {
-          const id = typeof model === 'string' ? model : model.id
-          const isActive = typeof model === 'string' ? id === activeModel : model.active
-          return (
-            <div
-              key={id}
-              className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 ${isActive ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-black/[0.08] border border-white/5'}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-theme-text-muted/30'}`} />
-              <span className="text-[11px] font-medium text-theme-text truncate" title={id}>{shortName(id)}</span>
-              {isActive && <span className="ml-auto text-[8px] font-semibold uppercase tracking-[0.14em] text-emerald-400">active</span>}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-})
-
-const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subvalue, percent, alert, compact = false }) {
+const InferenceSummaryCard = memo(function InferenceSummaryCard({ icon: Icon, label, value, subvalue, percent, alert }) {
   const progressTone = percent > 90
     ? 'liquid-metal-progress-fill liquid-metal-progress-fill--danger'
     : percent > 70
@@ -815,121 +445,199 @@ const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subvalue
       : 'liquid-metal-progress-fill'
 
   return (
-    <div className={`liquid-metal-frame liquid-metal-frame--soft liquid-metal-sequence-card bg-theme-card border border-theme-border rounded-xl min-w-0 ${compact ? 'px-2.5 py-2' : 'p-4'} overflow-hidden`}>
-      <div className={`flex items-center gap-1.5 ${compact ? 'mb-1' : 'mb-2'}`}>
-        <Icon size={compact ? 12 : 13} className={alert ? 'text-red-400' : 'text-theme-text-muted/50'} />
-        <span className={`${compact ? 'text-[9px]' : 'text-[9px]'} font-semibold uppercase tracking-[0.13em] text-theme-text-muted/55`}>{label}</span>
+    <div className="bg-theme-card border border-theme-border rounded-xl px-4 py-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        <Icon size={13} className={alert ? 'text-red-400' : 'text-theme-text-muted'} />
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted">{label}</span>
       </div>
-      <div className={`${compact ? 'text-[20px]' : 'text-[28px]'} font-bold text-theme-text font-mono leading-none truncate`} title={value}>{value}</div>
-      <div className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-theme-text-muted/70 mt-0.5 truncate`}>{subvalue}</div>
-      {percent !== undefined && (
-        <div className={`liquid-metal-progress-track rounded-full ${compact ? 'mt-1.5 h-[2px]' : 'mt-3 h-[4px]'} overflow-hidden`}>
-          <div
-            className={`h-full rounded-full transition-all ${progressTone}`}
-            style={{ width: `${Math.min(percent, 100)}%` }}
-          />
+      <div className="text-xl font-bold text-theme-text font-mono leading-none truncate" title={String(value)}>{value}</div>
+      {subvalue && <div className="text-[10px] text-theme-text-muted mt-0.5 truncate">{subvalue}</div>}
+      {percent != null && (
+        <div className="liquid-metal-progress-track rounded-full mt-1.5 h-[2px] overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${progressTone}`} style={{ width: `${Math.min(percent, 100)}%` }} />
         </div>
       )}
     </div>
   )
 })
 
-const SERVICE_GROUP_STYLES = {
-  inactive: {
-    dot: 'bg-red-500',
-    text: 'text-theme-text-secondary',
-    line: 'rgba(239,68,68,0.26)',
-  },
-  degraded: {
-    dot: 'bg-amber-400',
-    text: 'text-theme-text-secondary',
-    line: 'rgba(245,158,11,0.24)',
-  },
-  online: {
-    dot: 'bg-emerald-400',
-    text: 'text-theme-text-secondary',
-    line: 'rgba(52,211,153,0.22)',
-  },
+// ============================================================================
+// Time-series chart for dashboard (from InferenceAnalytics)
+// ============================================================================
+
+const DashTimeSeriesChart = memo(function DashTimeSeriesChart({ timestamps, values, label, unit, color, maxOverride, height = 140 }) {
+  const data = (values || []).filter(v => v != null)
+  if (data.length < 2) {
+    return (
+      <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+        <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">{label}</p>
+        <div className="flex items-center justify-center h-28 text-theme-text-muted text-xs">Collecting samples...</div>
+      </div>
+    )
+  }
+
+  const W = 400, H = height, padX = 4, padY = 8
+  const max = maxOverride != null ? maxOverride : Math.max(...data, 1) * 1.1
+  const latest = data[data.length - 1]
+
+  const pts = data.map((v, i) => {
+    const x = padX + (i / (data.length - 1)) * (W - padX * 2)
+    const y = H - padY - (v / max) * (H - padY * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+
+  const firstX = padX
+  const lastX = padX + ((data.length - 1) / (data.length - 1)) * (W - padX * 2)
+  const areaPath = `M ${firstX},${H - padY} L ${pts.split(' ').map(p => p).join(' L ')} L ${lastX},${H - padY} Z`
+
+  const ts = timestamps || []
+  const timeRange = ts.length >= 2
+    ? `${new Date(ts[0]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(ts[ts.length - 1]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    : ''
+
+  return (
+    <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide">{label}</p>
+        <span className="text-sm font-mono font-bold text-theme-text">
+          {typeof latest === 'number' ? (Number.isInteger(latest) ? latest : latest.toFixed(1)) : '--'}
+          {unit ? <span className="text-theme-text-muted ml-0.5 text-xs font-normal">{unit}</span> : null}
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full" style={{ height: `${height}px` }}>
+        <defs>
+          <linearGradient id={`area-dash-${label}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map(ratio => {
+          const y = H - padY - ratio * (H - padY * 2)
+          return <line key={ratio} x1={padX} x2={W - padX} y1={y} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        })}
+        <path d={areaPath} fill={`url(#area-dash-${label})`} />
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {data.length > 0 && (() => { const lp = pts.split(' ').pop().split(','); return <circle cx={lp[0]} cy={lp[1]} r="3" fill={color} /> })()}
+      </svg>
+      {timeRange && <p className="text-[10px] text-theme-text-muted mt-1.5 font-mono text-center">{timeRange}</p>}
+    </div>
+  )
+})
+
+// ============================================================================
+// Model stack panel (enhanced with context size)
+// ============================================================================
+
+const ModelStackPanel = memo(function ModelStackPanel({ models, activeModel, summary, contextSize }) {
+  const allModels = summary?.loaded_models || models || []
+  const displayModels = allModels.length ? allModels : (activeModel ? [{ id: activeModel, active: true }] : [])
+  const ctx = contextSize || summary?.context_size || null
+
+  return (
+    <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+      <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">Model Stack</p>
+      {displayModels.length > 0 ? (
+        <div className="space-y-2">
+          {displayModels.map((model) => {
+            const id = typeof model === 'string' ? model : model.id
+            const isActive = typeof model === 'string' ? id === activeModel : model.active
+            return (
+              <div key={id} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 ${isActive ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-theme-bg border border-theme-border/50'}`}>
+                <span className={`h-2 w-2 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-theme-text-muted/30'}`} />
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-medium text-theme-text truncate block" title={id}>{shortModelName(id)}</span>
+                  {model.size_gb && <span className="text-[10px] text-theme-text-muted">{model.size_gb} GB</span>}
+                </div>
+                {isActive && <span className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">active</span>}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-theme-text-muted">No models loaded</p>
+      )}
+      {ctx && (
+        <div className="mt-3 pt-3 border-t border-theme-border">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-theme-text-muted">Context size</span>
+            <span className="font-mono text-theme-text">{(ctx / 1024).toFixed(0)}k tokens</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+})
+
+// ============================================================================
+// Prometheus metrics table
+// ============================================================================
+
+const PrometheusTable = memo(function PrometheusTable({ allMetrics }) {
+  const entries = useMemo(() => {
+    if (!allMetrics) return []
+    return Object.entries(allMetrics).sort(([a], [b]) => a.localeCompare(b))
+  }, [allMetrics])
+
+  if (!entries.length) {
+    return (
+      <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+        <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">Prometheus Metrics</p>
+        <p className="text-xs text-theme-text-muted">Collecting metrics...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-theme-card border border-theme-border rounded-xl p-4">
+      <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">
+        Prometheus Metrics
+        <span className="ml-2 text-theme-text-muted font-normal lowercase">{entries.length} metrics</span>
+      </p>
+      <div className="max-h-64 overflow-y-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-theme-border">
+              <th className="text-left py-1.5 pr-3 text-theme-text-muted font-medium">Metric</th>
+              <th className="text-right py-1.5 text-theme-text-muted font-medium">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([name, value]) => (
+              <tr key={name} className="border-b border-theme-border/30 hover:bg-theme-bg/30">
+                <td className="py-1.5 pr-3 font-mono text-theme-text truncate max-w-xs" title={name}>{name}</td>
+                <td className="py-1.5 text-right font-mono text-theme-accent">
+                  {typeof value === 'number' ? (Number.isInteger(value) ? value.toLocaleString() : value.toFixed(4)) : String(value)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+})
+
+const SERVICE_STATUS_META = {
+  healthy:     { dot: 'bg-emerald-400', label: 'Online',   border: 'border-emerald-500/20',  bg: '' },
+  degraded:    { dot: 'bg-amber-400',   label: 'Degraded', border: 'border-amber-500/20',    bg: '' },
+  down:        { dot: 'bg-red-500',     label: 'Down',     border: 'border-red-500/20',      bg: '' },
+  unhealthy:   { dot: 'bg-red-500',     label: 'Unhealthy',border: 'border-red-500/20',      bg: '' },
+  unknown:     { dot: 'bg-zinc-500',    label: 'Unknown',  border: 'border-theme-border',    bg: '' },
 }
 
-const ServiceGroup = memo(function ServiceGroup({ label, tone, services }) {
-  const styles = SERVICE_GROUP_STYLES[tone]
-  const isPrimaryGroup = tone === 'online'
-  const [expanded, setExpanded] = useState(false)
-  const visibleServices = isPrimaryGroup
-    ? (expanded ? services : services.slice(0, 4))
-    : (expanded ? services : [])
-  const hiddenCount = Math.max(services.length - visibleServices.length, 0)
-  const summaryNames = services.slice(0, 2).map(service => service.name).join(' · ')
+const ServiceCard = memo(function ServiceCard({ service }) {
+  const meta = SERVICE_STATUS_META[service.status] || SERVICE_STATUS_META.unknown
 
   return (
-    <div
-      className="self-start rounded-2xl border bg-theme-card px-3 py-2.5"
-      style={{
-        borderColor: 'rgba(255,255,255,0.08)',
-        boxShadow: `inset 2px 0 0 ${styles.line}`,
-      }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
-          <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${styles.text}`}>
-            {label}
-          </p>
-          <span className="text-[10px] text-theme-text-muted/60">
-            {services.length} {services.length === 1 ? 'service' : 'services'}
-          </span>
-        </div>
-        {services.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(current => !current)}
-            className="text-[10px] font-mono uppercase tracking-[0.16em] text-theme-text-muted/65 transition-colors hover:text-theme-text"
-          >
-            {expanded ? 'Collapse' : 'Show all'}
-          </button>
-        )}
+    <div className={`bg-theme-card border ${meta.border || 'border-theme-border'} rounded-xl px-4 py-3`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={`h-2 w-2 rounded-full shrink-0 ${meta.dot}`} />
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-theme-text-muted">{meta.label}</span>
       </div>
-
-      {visibleServices.length > 0 ? (
-        <div className="mt-2 space-y-1">
-          {visibleServices.map((service) => (
-            <CompactServiceRow key={service.name} service={service} tone={tone} />
-          ))}
-          {!expanded && hiddenCount > 0 && (
-            <p className="px-1 pt-0.5 text-[10px] uppercase tracking-[0.14em] text-theme-text-muted/45">
-              +{hiddenCount} more
-            </p>
-          )}
-        </div>
-      ) : services.length === 0 ? (
-        <p className="mt-2 text-[10px] uppercase tracking-[0.14em] text-theme-text-muted/40">
-          Clear
-        </p>
-      ) : (
-        <div className="mt-1.5 min-h-[1.75rem]">
-          <p className="truncate text-[10px] uppercase tracking-[0.14em] text-theme-text-muted/52">
-            {summaryNames}
-            {services.length > 2 ? ` +${services.length - 2} more` : ''}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-})
-
-const CompactServiceRow = memo(function CompactServiceRow({ service, tone }) {
-  const styles = SERVICE_GROUP_STYLES[tone]
-
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/6 bg-black/[0.1] px-2 py-1.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${styles.dot}`} />
-        <span className="truncate text-[11px] font-medium text-theme-text">{service.name}</span>
-      </div>
-      <div className="flex shrink-0 items-center gap-2 text-[9px] text-theme-text-muted/75">
-        {service.port ? <span className="font-mono">:{service.port}</span> : null}
-        <span className="font-mono uppercase tracking-[0.14em]">{formatUptime(service.uptime)}</span>
+      <div className="text-sm font-bold text-theme-text leading-tight truncate" title={service.name}>{service.name}</div>
+      <div className="text-[10px] text-theme-text-muted mt-0.5 font-mono">
+        {service.port ? `${service.port}` : '—'}
+        {service.uptime ? <span className="ml-1.5">{formatUptime(service.uptime)}</span> : null}
       </div>
     </div>
   )

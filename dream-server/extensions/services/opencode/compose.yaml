@@ -1,0 +1,45 @@
+services:
+  opencode:
+    image: node:22-slim
+    container_name: dream-opencode
+    restart: unless-stopped
+    working_dir: /workspace
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Install opencode if not already cached
+        if [ ! -f /opencode-home/bin/opencode ]; then
+          echo "Installing opencode..."
+          npx --yes @anthropic-ai/opencode@latest --version || true
+          # opencode self-installs to ~/.opencode
+          cp -r /root/.opencode/* /opencode-home/ 2>/dev/null || true
+        fi
+        exec /opencode-home/bin/opencode web \
+          --port 3003 \
+          --hostname 0.0.0.0 \
+          --cors "${OPENCODE_CORS_ORIGIN:-*}"
+    environment:
+      - HOME=/root
+      - XDG_CONFIG_HOME=/config
+      - XDG_DATA_HOME=/data
+      - LITELLM_KEY=${LITELLM_KEY:-}
+    volumes:
+      - ${OPENCODE_HOME:-./data/opencode-bin}:/opencode-home:ro
+      - ./config/opencode:/config/opencode:ro
+      - ./data/opencode:/data/opencode
+    ports:
+      - "0.0.0.0:${OPENCODE_PORT:-3003}:3003"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:3003/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

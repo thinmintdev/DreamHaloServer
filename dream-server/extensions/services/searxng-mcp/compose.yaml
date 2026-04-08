@@ -1,0 +1,35 @@
+services:
+  searxng-mcp:
+    build:
+      context: ./extensions/services/searxng-mcp
+      dockerfile: Dockerfile
+    container_name: dream-searxng-mcp
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - SEARXNG_URL=http://searxng:8080
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8813
+    ports:
+      - "0.0.0.0:8813:8813"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - dream-network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; s=socket.create_connection(('127.0.0.1',8813),timeout=3); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  dream-network:
+    external: true

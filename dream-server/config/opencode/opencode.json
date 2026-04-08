@@ -1,0 +1,61 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "litellm/qwen3-coder-next",
+  "small_model": "litellm/qwen3.5-9b",
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LiteLLM (DreamHalo)",
+      "options": {
+        "baseURL": "http://litellm:4000/v1",
+        "apiKey": "env:LITELLM_KEY"
+      },
+      "models": {
+        "qwen3-coder-next": {
+          "name": "Qwen3-Coder-Next (46GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "qwen3.5-35b-a3b": {
+          "name": "Qwen3.5-35B-A3B (22GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "qwen3.5-9b": {
+          "name": "Qwen3.5-9B (6GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "glm-4.7-flash": {
+          "name": "GLM-4.7-Flash (17GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "nemotron-3-nano": {
+          "name": "Nemotron-3-Nano (23GB, local)",
+          "limit": { "context": 32768, "output": 8192 }
+        },
+        "gpt-oss-20b": {
+          "name": "GPT-OSS-20B (12GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "kappa-20b": {
+          "name": "Kappa-20B (42GB, local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "devstral-small": {
+          "name": "Devstral-Small (local)",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "claude-opus-4-6": {
+          "name": "Claude Opus 4.6 (cloud)",
+          "limit": { "context": 200000, "output": 32768 }
+        },
+        "claude-sonnet-4-6": {
+          "name": "Claude Sonnet 4.6 (cloud)",
+          "limit": { "context": 200000, "output": 32768 }
+        },
+        "claude-haiku-4-5": {
+          "name": "Claude Haiku 4.5 (cloud)",
+          "limit": { "context": 200000, "output": 32768 }
+        }
+      }
+    }
+  }
+}

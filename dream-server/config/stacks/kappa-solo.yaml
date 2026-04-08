@@ -1,0 +1,12 @@
+name: kappa-solo
+description: "Kappa-20B only — persona/roleplay specialist"
+
+models:
+  primary:
+    name: kappa-20b
+    lemonade_id: extra.kappa-20b
+    vram_gb: 42
+
+lemonade:
+  max_loaded_models: 1
+  ctx_size: 131072

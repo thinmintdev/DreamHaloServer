@@ -1,0 +1,42 @@
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: turnstone
+  name: Turnstone (AI Orchestration)
+  aliases: [orchestration]
+  container_name: dream-turnstone
+  host_env: TURNSTONE_HOST
+  default_host: turnstone
+  port: 8080
+  external_port_env: TURNSTONE_PORT
+  external_port_default: 8080
+  health: /health
+  ui_path: /
+  health_timeout: 60
+  type: docker
+  gpu_backends: [amd, nvidia]
+  compose_file: compose.yaml
+  category: optional
+  depends_on: [litellm]
+  env_vars:
+    - key: TURNSTONE_JWT_SECRET
+      required: true
+      secret: true
+      description: JWT secret for Turnstone auth (generate with python -c "import secrets; print(secrets.token_hex(32))")
+
+features:
+  - id: ai-orchestration
+    name: AI Orchestration
+    description: Multi-node AI orchestration with tool-using agents, workstreams, and governance
+    icon: Bot
+    category: agents
+    requirements:
+      services: [turnstone]
+      vram_gb: 0
+    enabled_services_all: [turnstone]
+    setup_time: ~2 minutes
+    priority: 5
+    gpu_backends: [amd, nvidia]

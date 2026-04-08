@@ -169,13 +169,17 @@ services:
       - DASHBOARD_API_KEY=${DASHBOARD_API_KEY:-}
       - OPENCLAW_TOKEN=${OPENCLAW_TOKEN:-}
       - TOKEN_SPY_URL=${TOKEN_SPY_URL:-http://token-spy:8080}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - TOKEN_SPY_API_KEY=${TOKEN_SPY_API_KEY:-}
+      - OPENCLAW_WORKSPACE_DIR=/openclaw-workspaces
     volumes:
       - ./scripts:/dream-server/scripts:ro
       - ./config:/dream-server/config:ro
       - ./extensions:/dream-server/extensions:ro
       - ./.env:/dream-server/.env:ro
       - ./data:/data
+      - ./config/openclaw/workspace:/openclaw-workspaces/workspace
+      - ./config/openclaw/workspace-mintops:/openclaw-workspaces/workspace-mintops
     deploy:
       resources:
         limits:

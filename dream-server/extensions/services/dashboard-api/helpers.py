@@ -147,26 +147,35 @@ async def get_loaded_model() -> Optional[str]:
 async def get_all_loaded_models() -> list[dict]:
     """Query llama-server for all currently loaded models.
 
-    Returns a list of dicts: [{"id": "model-name", "active": bool}, ...]
-    Lemonade can serve multiple models simultaneously (--max-loaded-models).
+    Returns a list of dicts: [{"id": "model-name", "size_gb": float, "active": bool}, ...]
+    Uses the Ollama-compatible /api/ps endpoint which returns only models
+    currently loaded in VRAM, not just registered.
     """
     try:
         host = SERVICES["llama-server"]["host"]
         port = SERVICES["llama-server"]["port"]
         client = await _get_httpx_client()
-        resp = await client.get(f"http://{host}:{port}{_LLM_API_PREFIX}/models")
-        data = resp.json().get("data", [])
+        # /api/ps returns only actively loaded models (Ollama compat)
+        resp = await client.get(f"http://{host}:{port}/api/ps")
+        models = resp.json().get("models", [])
         result = []
-        for m in data:
-            model_id = m.get("id", "")
-            status = m.get("status", {})
-            is_loaded = isinstance(status, dict) and status.get("value") == "loaded"
-            # Include all models that are loaded (skip ones just registered but not in memory)
-            if is_loaded or not isinstance(status, dict):
-                result.append({"id": model_id, "active": is_loaded})
-        # Mark first loaded model as active if none explicitly marked
-        if result and not any(m["active"] for m in result):
-            result[0]["active"] = True
+        for m in models:
+            name = m.get("name", m.get("model", ""))
+            # Strip :latest suffix for cleaner display
+            if name.endswith(":latest"):
+                name = name[:-7]
+            # Strip extra. prefix for cleaner display
+            display_id = name.removeprefix("extra.")
+            # Remove .gguf suffix
+            if display_id.endswith(".gguf"):
+                display_id = display_id[:-5]
+            size_bytes = m.get("size", 0) or m.get("size_vram", 0)
+            result.append({
+                "id": display_id,
+                "raw_id": name,
+                "size_gb": round(size_bytes / (1024 ** 3), 1) if size_bytes else None,
+                "active": True,
+            })
         return result
     except (httpx.HTTPError, httpx.TimeoutException) as e:
         logger.debug("get_all_loaded_models failed: %s", e)

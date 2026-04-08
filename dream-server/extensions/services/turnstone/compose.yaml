@@ -1,0 +1,43 @@
+services:
+  turnstone:
+    image: ghcr.io/turnstonelabs/turnstone:stable
+    container_name: dream-turnstone
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - >-
+        turnstone-server
+        --host 0.0.0.0
+        --port 8080
+        --base-url "$${LLM_BASE_URL}"
+        --api-key "$${OPENAI_API_KEY}"
+        $${MODEL:+--model $$MODEL}
+        $${SKIP_PERMISSIONS:+--skip-permissions}
+    environment:
+      - LLM_BASE_URL=http://litellm:4000/v1
+      - OPENAI_API_KEY=${LITELLM_KEY:-}
+      - TURNSTONE_JWT_SECRET=${TURNSTONE_JWT_SECRET:?Set TURNSTONE_JWT_SECRET in .env}
+      - MODEL=${TURNSTONE_MODEL:-}
+      - SKIP_PERMISSIONS=${TURNSTONE_SKIP_PERMISSIONS:-}
+      - TURNSTONE_DB_BACKEND=sqlite
+      - TURNSTONE_CONFIG=/config/config.toml
+    volumes:
+      - ./data/turnstone:/data
+      - ./config/turnstone:/config:ro
+    ports:
+      - "0.0.0.0:${TURNSTONE_PORT:-8080}:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "/usr/local/bin/healthcheck.py", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

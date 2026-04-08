@@ -1,0 +1,20 @@
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: searxng-mcp
+  name: SearXNG MCP
+  aliases: [search-mcp, web-search-mcp]
+  container_name: dream-searxng-mcp
+  default_host: searxng-mcp
+  port: 8813
+  external_port_env: SEARXNG_MCP_PORT
+  external_port_default: 8813
+  health: /mcp
+  type: docker
+  compose_file: compose.yaml
+  gpu_backends: [amd, nvidia, none]
+  category: optional
+  depends_on: [searxng]

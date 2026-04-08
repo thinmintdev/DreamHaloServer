@@ -1,0 +1,12 @@
+name: oss-solo
+description: "GPT-OSS-20B only — open-source general-purpose"
+
+models:
+  primary:
+    name: gpt-oss-20b
+    lemonade_id: extra.gpt-oss-20b-Q4_K_M.gguf
+    vram_gb: 12
+
+lemonade:
+  max_loaded_models: 1
+  ctx_size: 131072

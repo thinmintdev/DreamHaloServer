@@ -8,12 +8,13 @@ service:
   name: OpenCode (IDE)
   aliases: [opencode-web]
   container_name: ""
-  default_host: localhost
+  default_host: opencode
   port: 3003
   external_port_env: OPENCODE_PORT
   external_port_default: 3003
   health: /
-  type: host-systemd
+  type: docker
+  compose_file: compose.yaml
   gpu_backends: [amd, nvidia]
   category: optional
   depends_on: []

@@ -51,6 +51,7 @@ services:
       - LEMONADE_LLAMACPP_BACKEND=rocm
       - LEMONADE_CTX_SIZE=${CTX_SIZE:-131072}
       - LEMONADE_MAX_LOADED_MODELS=${LEMONADE_MAX_LOADED_MODELS:-}
+      - GPU_MAX_HEAP_SIZE=${GPU_MAX_HEAP_SIZE:-96G}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/v1/health"]
       interval: 15s
@@ -61,7 +62,7 @@ services:
       resources:
         limits:
           cpus: '16.0'
-          memory: 110G
+          memory: 96G
         reservations:
           cpus: '4.0'
           memory: 8G

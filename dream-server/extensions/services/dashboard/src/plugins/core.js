@@ -5,6 +5,9 @@ import {
   Puzzle,
   Activity,
   Brain,
+  Database,
+  BarChart2,
+  Network,
 } from 'lucide-react'
 
 const Dashboard = lazy(() => import('../pages/Dashboard'))
@@ -12,6 +15,9 @@ const SettingsPage = lazy(() => import('../pages/Settings'))
 const Extensions = lazy(() => import('../pages/Extensions'))
 const GPUMonitor = lazy(() => import('../pages/GPUMonitor'))
 const Memory = lazy(() => import('../pages/Memory'))
+const ModelLibrary = lazy(() => import('../pages/ModelLibrary'))
+const InferenceAnalytics = lazy(() => import('../pages/InferenceAnalytics'))
+const ServiceMap = lazy(() => import('../pages/ServiceMap'))
 
 export const coreRoutes = [
   {
@@ -36,6 +42,16 @@ export const coreRoutes = [
     order: 1,
   },
   {
+    id: 'inference',
+    path: '/inference',
+    label: 'Inference',
+    icon: BarChart2,
+    component: InferenceAnalytics,
+    getProps: () => ({}),
+    sidebar: false,
+    order: 1.5,
+  },
+  {
     id: 'memory',
     path: '/memory',
     label: 'Memory',
@@ -44,6 +60,26 @@ export const coreRoutes = [
     getProps: () => ({}),
     sidebar: true,
     order: 2,
+  },
+  {
+    id: 'model-library',
+    path: '/model-library',
+    label: 'Model Library',
+    icon: Database,
+    component: ModelLibrary,
+    getProps: () => ({}),
+    sidebar: true,
+    order: 2.5,
+  },
+  {
+    id: 'service-map',
+    path: '/service-map',
+    label: 'Service Map',
+    icon: Network,
+    component: ServiceMap,
+    getProps: () => ({}),
+    sidebar: true,
+    order: 2.8,
   },
   {
     id: 'extensions',

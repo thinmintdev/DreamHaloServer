@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, XCircle, Loader2, MessageSquare, Mic, FileText, Zap, RefreshCw } from 'lucide-react'
+import { getServiceUrl } from '../utils/serviceUrls'
 
 export function SuccessValidation({ status, onAllPassed }) {
   const [tests, setTests] = useState([])
@@ -23,7 +24,7 @@ export function SuccessValidation({ status, onAllPassed }) {
         icon: MessageSquare,
         status: serviceMap['llama-server (LLM Inference)'] === 'healthy' ? 'passed' : 'pending',
         service: 'llama-server (LLM Inference)',
-        action: 'Try chatting at localhost:3000',
+        action: `Try chatting at ${getServiceUrl(3000)}`,
         testUrl: '/api/test/llm'
       },
       {
@@ -55,7 +56,7 @@ export function SuccessValidation({ status, onAllPassed }) {
         icon: Zap,
         status: serviceMap['n8n (Workflows)'] === 'healthy' ? 'passed' : 'pending',
         service: 'n8n (Workflows)',
-        action: 'Visit localhost:5678',
+        action: `Visit ${getServiceUrl(5678)}`,
         testUrl: '/api/test/workflows'
       }
     ])

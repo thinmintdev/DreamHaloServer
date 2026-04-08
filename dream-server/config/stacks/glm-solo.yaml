@@ -1,0 +1,12 @@
+name: glm-solo
+description: "GLM-4.7-Flash only — fast general-purpose 17B"
+
+models:
+  primary:
+    name: glm-4.7-flash
+    lemonade_id: extra.GLM-4.7-Flash-UD-Q4_K_XL.gguf
+    vram_gb: 17
+
+lemonade:
+  max_loaded_models: 1
+  ctx_size: 131072

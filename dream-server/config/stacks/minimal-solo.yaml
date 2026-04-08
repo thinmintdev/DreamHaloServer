@@ -1,0 +1,12 @@
+name: minimal-solo
+description: "Nemotron-3-Nano only — lowest VRAM, single model"
+
+models:
+  primary:
+    name: nemotron-3-nano
+    lemonade_id: extra.Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf
+    vram_gb: 22
+
+lemonade:
+  max_loaded_models: 1
+  ctx_size: 32768

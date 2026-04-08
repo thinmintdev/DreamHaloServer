@@ -1,0 +1,12 @@
+name: qwen-9b-solo
+description: "Qwen3.5-9B only — lightweight fast utility"
+
+models:
+  primary:
+    name: qwen3.5-9b
+    lemonade_id: extra.Qwen3.5-9B-UD-Q4_K_XL.gguf
+    vram_gb: 6
+
+lemonade:
+  max_loaded_models: 1
+  ctx_size: 131072

@@ -22,6 +22,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - SEARXNG_BASE_URL=http://searxng:8080
       - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - PERPLEXICA_URL=http://perplexica:3000
       - WHISPER_URL=http://whisper:8000
       - KOKORO_URL=http://tts:8880

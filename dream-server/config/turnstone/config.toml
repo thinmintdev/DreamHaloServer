@@ -1,0 +1,70 @@
+# Turnstone config — DreamHalo model aliases via LiteLLM gateway
+
+[api]
+base_url = "http://litellm:4000/v1"
+
+[model]
+name = "claude-sonnet-4-6"
+
+[models.claude-sonnet]
+model = "claude-sonnet-4-6"
+provider = "openai"
+
+[models.claude-opus]
+model = "claude-opus-4-6"
+provider = "openai"
+
+[models.claude-haiku]
+model = "claude-haiku-4-5"
+provider = "openai"
+
+[models.qwen-coder]
+model = "qwen3-coder-next"
+provider = "openai"
+context_window = 131072
+
+[models.qwen-35b]
+model = "qwen3.5-35b-a3b"
+provider = "openai"
+context_window = 131072
+
+[models.glm-flash]
+model = "glm-4.7-flash"
+provider = "openai"
+
+[models.nemotron]
+model = "nemotron-3-nano"
+provider = "openai"
+
+[models.gpt-oss]
+model = "gpt-oss-20b"
+provider = "openai"
+
+[models.kappa]
+model = "kappa-20b"
+provider = "openai"
+context_window = 131072
+
+[models.devstral]
+model = "devstral-small"
+provider = "openai"
+
+[models.qwen-9b]
+model = "qwen3.5-9b"
+provider = "openai"
+context_window = 131072
+
+[models.local]
+model = "local"
+provider = "openai"
+
+[models.default]
+model = "default"
+provider = "openai"
+
+[tools]
+skip_permissions = true
+web_search_backend = "ddg"
+
+[mcp]
+config_path = "/config/mcp.json"

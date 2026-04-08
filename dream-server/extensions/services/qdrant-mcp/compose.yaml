@@ -1,0 +1,39 @@
+services:
+  qdrant-mcp:
+    build:
+      context: ./extensions/services/qdrant-mcp
+      dockerfile: Dockerfile
+    container_name: dream-qdrant-mcp
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_KEY=${LITELLM_KEY:-}
+      - EMBEDDING_MODEL=${QDRANT_MCP_EMBEDDING_MODEL:-text-embedding-3-small}
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8812
+    ports:
+      - "0.0.0.0:8812:8812"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - dream-network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; s=socket.create_connection(('127.0.0.1',8812),timeout=3); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  dream-network:
+    external: true

@@ -6,6 +6,7 @@ import { useSystemStatus } from './hooks/useSystemStatus'
 import { useVersion } from './hooks/useVersion'
 import { getInternalRoutes } from './plugins/registry'
 import SplashScreen from './components/SplashScreen'
+import CommandPalette from './components/CommandPalette'
 
 function getStorageValue(storage, key) {
   try {
@@ -54,8 +55,16 @@ function App() {
   const routes = useMemo(() => getInternalRoutes({ status, loading }), [status, loading])
   const handleToggle = useCallback(() => setSidebarCollapsed(c => !c), [])
 
+  // Listen for command palette sidebar toggle
+  useEffect(() => {
+    const handler = () => handleToggle()
+    window.addEventListener('dream:toggle-sidebar', handler)
+    return () => window.removeEventListener('dream:toggle-sidebar', handler)
+  }, [handleToggle])
+
   return (
     <div className="flex min-h-screen bg-theme-bg text-theme-text relative">
+      <CommandPalette />
       {!splashDone && <SplashScreen onComplete={() => {
         setStorageValue(globalThis.sessionStorage, 'dream-splash-shown', '1')
         setSplashDone(true)

@@ -7,9 +7,9 @@ models:
     lemonade_id: extra.Qwen3-Coder-Next-MXFP4_MOE.gguf
     vram_gb: 46
   utility:
-    name: qwen3.5-4b
-    lemonade_id: extra.Qwen3.5-4B-UD-Q4_K_XL.gguf
-    vram_gb: 3
+    name: qwen3.5-9b
+    lemonade_id: extra.Qwen3.5-9B-UD-Q4_K_XL.gguf
+    vram_gb: 6
 
 lemonade:
   max_loaded_models: 3

@@ -1,12 +1,20 @@
-id: proxmox-mcp
-name: Proxmox MCP
-description: MCP server for Proxmox VE management (ProxmoxMCP-Plus)
-category: automation
-port: 8811
-health: /health
-container: dream-proxmox-mcp
-aliases:
-  - proxmox-mcp
-  - pve-mcp
-feature_flags:
-  - mcp
+schema_version: dream.services.v1
+
+compatibility:
+  dream_min: "2.0.0"
+
+service:
+  id: proxmox-mcp
+  name: Proxmox MCP
+  aliases: [pve-mcp]
+  container_name: dream-proxmox-mcp
+  default_host: proxmox-mcp
+  port: 8811
+  external_port_env: PROXMOX_MCP_PORT
+  external_port_default: 8811
+  health: /sse
+  type: docker
+  compose_file: compose.yaml
+  gpu_backends: [amd, nvidia, none]
+  category: optional
+  depends_on: []

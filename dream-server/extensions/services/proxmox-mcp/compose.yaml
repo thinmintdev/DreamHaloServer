@@ -8,7 +8,7 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command: ["exec /app/.venv/bin/python -m proxmox_mcp.server"]
     environment:
-      - PROXMOX_HOST=${PROXMOX_HOST:-10.0.1.110}
+      - PROXMOX_HOST=${PROXMOX_HOST:?Set PROXMOX_HOST in .env}
       - PROXMOX_PORT=${PROXMOX_PORT:-8006}
       - PROXMOX_USER=${PROXMOX_USER:-root@pam}
       - PROXMOX_TOKEN_NAME=${PROXMOX_TOKEN_NAME:?Set PROXMOX_TOKEN_NAME in .env}
@@ -20,11 +20,11 @@ services:
       - API_PORT=8811
       - LOG_LEVEL=INFO
     volumes:
-      - ../../../config/proxmox-mcp:/app/proxmox-config:ro
+      - ./config/proxmox-mcp:/app/proxmox-config:ro
     ports:
-      - "127.0.0.1:8811:8811"
+      - "0.0.0.0:8811:8811"
     extra_hosts:
-      - "proxmox:10.0.1.110"
+      - "proxmox:${PROXMOX_HOST:?Set PROXMOX_HOST in .env}"
     deploy:
       resources:
         limits:

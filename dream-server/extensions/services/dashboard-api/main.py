@@ -79,7 +79,7 @@ _STORAGE_CACHE_TTL = 30.0
 _SERVICE_POLL_INTERVAL = 10.0  # background health check interval
 
 # --- Router imports ---
-from routers import workflows, features, setup, updates, agents, privacy, extensions, gpu as gpu_router, resources, memory
+from routers import workflows, features, setup, updates, agents, privacy, extensions, gpu as gpu_router, resources, memory, model_library, service_map, inference
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +132,9 @@ app.include_router(extensions.router)
 app.include_router(gpu_router.router)
 app.include_router(resources.router)
 app.include_router(memory.router)
+app.include_router(model_library.router)
+app.include_router(service_map.router)
+app.include_router(inference.router)
 
 
 # ================================================================
@@ -549,6 +552,7 @@ async def startup_event():
     asyncio.create_task(collect_metrics())
     asyncio.create_task(_poll_service_health())
     asyncio.create_task(gpu_router.poll_gpu_history())
+    asyncio.create_task(inference.poll_inference_history())
 
 
 if __name__ == "__main__":
