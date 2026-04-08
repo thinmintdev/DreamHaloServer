@@ -348,31 +348,34 @@ export default function Services() {
                 <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-theme-text-muted w-24">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {loading && containers.length === 0 ? (
-                [...Array(8)].map((_, i) => (
+            {loading && containers.length === 0 ? (
+              <tbody>
+                {[...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-theme-border/50">
                     <td colSpan={9} className="px-4 py-3">
                       <div className="h-4 bg-theme-border/50 rounded animate-pulse" />
                     </td>
                   </tr>
-                ))
-              ) : filtered.length === 0 ? (
+                ))}
+              </tbody>
+            ) : filtered.length === 0 ? (
+              <tbody>
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-theme-text-muted">
                     No containers found
                   </td>
                 </tr>
-              ) : (
-                filtered.map(c => {
-                  const ports = formatPorts(c.ports)
-                  const mem = formatMemory(c.memory_usage)
-                  const isExpanded = expanded[c.id]
-                  const firstPort = ports.find(p => p.host)
+              </tbody>
+            ) : (
+              filtered.map(c => {
+                const ports = formatPorts(c.ports)
+                const mem = formatMemory(c.memory_usage)
+                const isExpanded = expanded[c.id]
+                const firstPort = ports.find(p => p.host)
 
-                  return (
-                    <tbody key={c.id}>
-                      <tr className="border-b border-theme-border/50 hover:bg-white/[0.02] transition-colors">
+                return (
+                  <tbody key={c.id}>
+                    <tr className="border-b border-theme-border/50 hover:bg-white/[0.02] transition-colors">
                         {/* Expand */}
                         <td className="px-4 py-3">
                           <button
@@ -466,7 +469,6 @@ export default function Services() {
                   )
                 })
               )}
-            </tbody>
           </table>
         </div>
       </div>
