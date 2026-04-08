@@ -1,8 +1,10 @@
 <div align="center">
 
-# Dream Server
+# DreamHalo Server
 
 ### Own your AI. One person, one dream, one machine at a time.
+
+> **This is DreamHalo** — a fork of [Dream Server](https://github.com/Light-Heart-Labs/DreamServer) built for AMD Strix Halo hardware with multi-model inference, a unified local+cloud AI gateway, autonomous agents with persistent memory, and an enhanced dashboard. Sections marked with **`[DreamHalo]`** are fork-specific additions.
 
 A handful of companies control the vast majority of global AI traffic — and with it, your data, your costs, and your uptime. Every query you send to a centralized provider is business intelligence you don’t own, running on infrastructure you don’t control, priced on terms you can’t negotiate.
 
@@ -11,8 +13,7 @@ If AI is becoming critical infrastructure, it shouldn’t be rented. Self-hostin
 **Dream Server is the exit.** A fully local AI stack — LLM inference, chat, voice, agents, workflows, RAG, image generation, and privacy tools — deployed on your hardware with a single command. No cloud. No subscriptions. No one watching.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/Light-Heart-Labs/DreamServer)](https://github.com/Light-Heart-Labs/DreamServer/stargazers)
-[![Release](https://img.shields.io/github/v/release/Light-Heart-Labs/DreamServer)](https://github.com/Light-Heart-Labs/DreamServer/releases)
+[![Upstream](https://img.shields.io/badge/Upstream-Dream%20Server-blue)](https://github.com/Light-Heart-Labs/DreamServer)
 
 ![Dream Server Dashboard](resources/docs/images/dashboard.png)
 
@@ -58,6 +59,14 @@ curl -fsSL https://raw.githubusercontent.com/Light-Heart-Labs/DreamServer/v2.3.2
 ```
 
 Open **http://localhost:3000** and start chatting.
+
+> **`[DreamHalo]` Install with DreamHalo extensions:**
+> ```bash
+> git clone https://github.com/thinmintdev/DreamHaloServer.git
+> cd DreamHaloServer/dream-server
+> ./install.sh --dreamhalo
+> ```
+> This enables multi-model stacks, CLIProxyAPI, and Model Manager on top of the base install.
 
 > **No GPU?** Dream Server also runs in cloud mode — same full stack, powered by OpenAI/Anthropic/Together APIs instead of local inference:
 > ```bash
@@ -156,6 +165,28 @@ See the [macOS Quickstart](dream-server/docs/MACOS-QUICKSTART.md) for details.
 - **Privacy Shield** — PII scrubbing proxy for API calls
 - **Dashboard** — real-time GPU metrics, service health, model management
 
+### `[DreamHalo]` Additional Extensions
+
+| Extension | Purpose | Port |
+|-----------|---------|------|
+| **CLIProxyAPI** | OAuth-based proxy for Claude API access | — |
+| **Model Manager** | Browse, download, load/unload models | 3010 |
+| **OpenCode** | AI-powered code editor | 3003 |
+| **Proxmox MCP** | MCP server for Proxmox VE management | 8811 |
+| **Qdrant MCP** | MCP server for vector database operations | 8812 |
+| **SearXNG MCP** | MCP server for search integration | 8813 |
+| **Turnstone** | Configuration management service | 8080 |
+
+### `[DreamHalo]` Dashboard Enhancements
+
+- **SSL subdomain URLs** — set `VITE_DREAM_DOMAIN` for clean URLs (e.g. `chat.dreamhalo.localhost`)
+- **Model Stack Panel** — live view of all loaded models with per-model VRAM usage
+- **Memory page** — browse, search, and manage agent memory files with markdown rendering
+- **Service Map** — visual topology of running services
+- **Inference Analytics** — real-time TPS, KV cache, and request history charts
+- **Model Library** — browse and manage available models
+- **Command Palette** — `Ctrl+K` quick navigation
+
 ---
 
 ## Hardware Auto-Detection
@@ -240,6 +271,36 @@ docker compose restart llama-server
 
 Rollback is automatic — if a new model fails to load, Dream Server reverts to your previous model.
 
+### `[DreamHalo]` Multi-Model Stacks
+
+DreamHalo runs **multiple models simultaneously** using Lemonade's `--max-loaded-models` with named stack presets:
+
+```bash
+dream stack list          # Show available stacks
+dream stack apply coder   # Load coder stack (49 GB)
+dream stack status        # See what's currently loaded
+```
+
+| Stack | Models | VRAM |
+|-------|--------|------|
+| `coder` | Qwen3-Coder-Next (80B MoE) + embeddings + reranker | ~49 GB |
+| `balanced` | Qwen3-Coder-Next + GLM-4.7-Flash + embeddings + reranker | ~58 GB |
+| `minimal` | GLM-4.7-Flash + embeddings + reranker | ~25 GB |
+| `kappa-solo` | Kappa-20B-131K (BF16 split) | ~40 GB |
+| `oss-solo` | All open-source models without cloud routing | variable |
+
+Solo stacks (`*-solo.yaml`) load a single primary model for maximum context or experimentation.
+
+### `[DreamHalo]` Unified LiteLLM Gateway
+
+All inference — local and cloud — routes through a single LiteLLM gateway at `:4000`:
+
+- **15 model routes**: 3 Claude (via CLIProxyAPI OAuth), 8 local Lemonade models, embeddings, reranking, 2 aliases
+- **Fallback chains**: Claude primary with local fallback (or vice versa)
+- **Single endpoint** for Open WebUI, OpenClaw, n8n, and any client
+
+Config: `dream-server/config/litellm/dreamhalo.yaml`
+
 ---
 
 ## Extensibility
@@ -288,6 +349,68 @@ dream config show           # View .env (secrets masked)
 dream preset save gaming    # Snapshot current config
 dream preset load gaming    # Restore it
 ```
+
+### `[DreamHalo]` Additional CLI Commands
+
+```bash
+dream stack list            # Show available model stacks
+dream stack apply balanced  # Load a named stack
+dream stack status          # See currently loaded models
+dream lemonade list         # List Lemonade models
+dream lemonade status       # Lemonade server status
+```
+
+---
+
+## `[DreamHalo]` Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Open WebUI (:3000)                    │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+┌────────────────────────────▼─────────────────────────────────┐
+│                    LiteLLM Gateway (:4000)                   │
+│          Claude (CLIProxyAPI) + Local (Lemonade)             │
+└──────┬──────────────────┬────────────────────────┬───────────┘
+       │                  │                        │
+┌──────▼──────┐  ┌────────▼────────┐  ┌────────────▼──────────┐
+│  Lemonade   │  │   CLIProxyAPI   │  │     OpenClaw Agent    │
+│  (ROCm)     │  │   (OAuth)       │  │  AgentMint (:7860)    │
+│  Multi-model│  │   Claude API    │  │  + Telegram bot       │
+└─────────────┘  └─────────────────┘  └───────────┬───────────┘
+                                                   │
+       ┌───────────────┬──────────────┬────────────┤
+       │               │              │            │
+┌──────▼──┐  ┌─────────▼──┐  ┌───────▼───┐  ┌─────▼─────┐
+│ Qdrant  │  │  SearXNG   │  │ Dashboard │  │   n8n     │
+│ Memory  │  │  Search    │  │  (:3001)  │  │ Workflows │
+│ (:6333) │  │  (:8888)   │  │  + API    │  │  (:5678)  │
+└─────────┘  └────────────┘  └───────────┘  └───────────┘
+```
+
+### `[DreamHalo]` OpenClaw Agent
+
+OpenClaw runs as an autonomous agent with persistent memory and multi-channel access:
+
+- **Qdrant vector memory** — semantic search, compaction, and quality guards
+- **SearXNG web search** — privacy-respecting search integration
+- **Browser support** — Playwright Chromium for web interaction
+- **Telegram bot** — mobile access via configured bot
+- **12 bundled skills** (main agent) + 5 ops skills (ops agent)
+- **Memory maintenance** — automated light/daily/weekly memory hygiene tiers
+- All models routed through LiteLLM (Claude + local)
+
+### `[DreamHalo]` Hardware
+
+Built for **AMD Ryzen AI MAX+ 395** with 96 GB unified memory, running in a Proxmox LXC container. The multi-model stack system maximizes utilization of the large unified memory pool.
+
+| Component | Spec |
+|-----------|------|
+| CPU/GPU | AMD Ryzen AI MAX+ 395 (Strix Halo) |
+| Memory | 96 GB unified (shared CPU/GPU) |
+| Host | Proxmox VE (LXC container) |
+| GPU Compute | ROCm (gfx1151) |
 
 ---
 
@@ -397,5 +520,7 @@ Apache 2.0 — Use it, modify it, ship it. See [LICENSE](LICENSE).
 <div align="center">
 
 *Built by [Light Heart Labs](https://github.com/Light-Heart-Labs) and the growing resistance that refuses to rent what should be owned.*
+
+*DreamHalo fork maintained by [thinmintdev](https://github.com/thinmintdev) — extending Dream Server for Strix Halo.*
 
 </div>

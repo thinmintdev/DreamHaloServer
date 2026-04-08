@@ -42,15 +42,15 @@ All inference — local and cloud — routes through a single LiteLLM gateway at
 
 Config: `config/litellm/dreamhalo.yaml`
 
-### OpenClaw Agent (AgentMint)
+### OpenClaw Agent
 
 OpenClaw runs as an autonomous agent with:
 
 - **Qdrant vector memory** — persistent semantic memory with search, compaction, and quality guards
 - **SearXNG web search** — privacy-respecting search integration
 - **Browser support** — Playwright Chromium for web interaction
-- **Telegram bot** — `@agentmint_bot` for mobile access
-- **12 bundled skills** (AgentMint) + 5 ops skills (MintOps)
+- **Telegram bot** — mobile access via configured bot
+- **12 bundled skills** (main agent) + 5 ops skills (ops agent)
 - **Memory maintenance** — automated light/daily/weekly memory hygiene tiers
 - All models routed through LiteLLM (Claude + local)
 
@@ -71,7 +71,6 @@ Config: `config/openclaw/openclaw-dreamhalo.json`
 | Extension | Purpose |
 |-----------|---------|
 | **CLIProxyAPI** | OAuth-based proxy for Claude API access (replaces API keys) |
-| **Unsloth Studio** | LLM fine-tuning with AMD ROCm and NVIDIA GPU overlays |
 | **Model Manager** | Browse, download, load/unload models via FastAPI (`:3010`) |
 | **Proxmox MCP** | MCP server for Proxmox VE infrastructure management |
 | **OpenCode** | AI-powered code editor extension |
@@ -83,7 +82,7 @@ Config: `config/openclaw/openclaw-dreamhalo.json`
 
 A new **phase 14** (`installers/phases/14-dreamhalo.sh`) runs after the standard installer:
 
-- Enables CLIProxyAPI, Model Manager, and Unsloth Studio extensions
+- Enables CLIProxyAPI and Model Manager extensions
 - Sets `DREAM_MODE=dreamhalo`
 - Wires OpenClaw to the DreamHalo agent config
 - Triggered by `./install.sh --dreamhalo`

@@ -114,7 +114,7 @@
         "model": {
           "primary": "litellm/claude-sonnet-4-6"
         },
-        "skills": ["healthcheck", "mcporter", "memory-maintenance", "session-logs", "tmux"]
+        "skills": ["healthcheck", "mcporter", "memory-maintenance", "session-logs", "tmux", "turnstone"]
       }
     ]
   },
