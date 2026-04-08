@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Palette
 } from 'lucide-react'
 import { getSidebarExternalLinks, getSidebarNavItems } from '../plugins/registry'
@@ -14,6 +15,8 @@ export default function Sidebar({ status, collapsed, onToggle }) {
   const [serviceTokens, setServiceTokens] = useState({})
   const [apiLinks, setApiLinks] = useState([])
   const [showAllQuickLinks, setShowAllQuickLinks] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState({})
+  const location = useLocation()
 
   useEffect(() => {
     fetch('/api/service-tokens')
@@ -26,6 +29,18 @@ export default function Sidebar({ status, collapsed, onToggle }) {
       .then(setApiLinks)
       .catch(() => {})
   }, [])
+
+  // Auto-expand groups when a child route is active
+  useEffect(() => {
+    for (const item of navItems) {
+      if (item.children) {
+        const isChildActive = item.children.some(c => location.pathname.startsWith(c.path))
+        if (isChildActive) {
+          setExpandedGroups(prev => ({ ...prev, [item.id]: true }))
+        }
+      }
+    }
+  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const navItems = useMemo(
     () => getSidebarNavItems({ status }),
@@ -78,6 +93,107 @@ export default function Sidebar({ status, collapsed, onToggle }) {
       : totalCount > 0
         ? 'text-yellow-500'
         : 'text-theme-text-muted'
+
+  const toggleGroup = (groupId) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }))
+  }
+
+  const renderNavItem = (item) => {
+    const Icon = item.icon
+    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = expandedGroups[item.id]
+    const isGroupActive = hasChildren && item.children.some(c => location.pathname.startsWith(c.path))
+
+    if (hasChildren) {
+      return (
+        <li key={item.id}>
+          <button
+            onClick={() => toggleGroup(item.id)}
+            title={collapsed ? item.label : undefined}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isGroupActive
+                ? 'liquid-metal-nav text-white shadow-lg'
+                : 'text-theme-text-muted hover:text-theme-text'
+            }`}
+            style={isGroupActive
+              ? {
+                border: '1px solid var(--sidebar-active-border)',
+                boxShadow: 'var(--sidebar-active-shadow)',
+              }
+              : { background: 'transparent' }
+            }
+          >
+            <Icon size={20} />
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">{item.label}</span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                  style={{ color: 'var(--sidebar-text-muted)' }}
+                />
+              </>
+            )}
+          </button>
+          {/* Children */}
+          {!collapsed && isExpanded && (
+            <ul className="mt-1 ml-4 space-y-0.5 border-l border-theme-border/30 pl-3">
+              {item.children.map(child => {
+                const ChildIcon = child.icon
+                return (
+                  <li key={child.id}>
+                    <NavLink
+                      to={child.path}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive
+                            ? 'text-white bg-white/[0.08]'
+                            : 'text-theme-text-muted hover:text-theme-text hover:bg-white/[0.03]'
+                        }`
+                      }
+                    >
+                      <ChildIcon size={16} />
+                      <span>{child.label}</span>
+                    </NavLink>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </li>
+      )
+    }
+
+    // Regular nav item (no children)
+    return (
+      <li key={item.path}>
+        <NavLink
+          to={item.path}
+          end={item.path === '/'}
+          title={collapsed ? item.label : undefined}
+          className={({ isActive }) =>
+            `flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isActive
+                ? 'liquid-metal-nav text-white shadow-lg'
+                : 'text-theme-text-muted hover:text-theme-text'
+            }`
+          }
+          style={({ isActive }) => isActive
+            ? {
+              border: '1px solid var(--sidebar-active-border)',
+              boxShadow: 'var(--sidebar-active-shadow)',
+            }
+            : {
+              background: 'transparent',
+            }
+          }
+        >
+          <Icon size={20} />
+          {!collapsed && <span>{item.label}</span>}
+        </NavLink>
+      </li>
+    )
+  }
 
   return (
     <aside
@@ -133,33 +249,7 @@ export default function Sidebar({ status, collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto overflow-x-hidden">
         <ul className="space-y-1.5">
-          {navItems.map(({ path, icon: Icon, label }) => (
-            <li key={path}>
-              <NavLink
-                to={path}
-                title={collapsed ? label : undefined}
-                className={({ isActive }) =>
-                  `flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'liquid-metal-nav text-white shadow-lg'
-                      : 'text-theme-text-muted hover:text-theme-text'
-                  }`
-                }
-                style={({ isActive }) => isActive
-                  ? {
-                    border: '1px solid var(--sidebar-active-border)',
-                    boxShadow: 'var(--sidebar-active-shadow)',
-                  }
-                  : {
-                    background: 'transparent',
-                  }
-                }
-              >
-                <Icon size={20} />
-                {!collapsed && <span>{label}</span>}
-              </NavLink>
-            </li>
-          ))}
+          {navItems.map(renderNavItem)}
         </ul>
 
         {/* External Links — hidden when collapsed */}

@@ -8,6 +8,9 @@ import {
   Database,
   BarChart2,
   Network,
+  Container,
+  ScrollText,
+  LayoutTemplate,
 } from 'lucide-react'
 
 const Dashboard = lazy(() => import('../pages/Dashboard'))
@@ -18,6 +21,8 @@ const Memory = lazy(() => import('../pages/Memory'))
 const ModelLibrary = lazy(() => import('../pages/ModelLibrary'))
 const InferenceAnalytics = lazy(() => import('../pages/InferenceAnalytics'))
 const ServiceMap = lazy(() => import('../pages/ServiceMap'))
+const Services = lazy(() => import('../pages/Services'))
+const Logs = lazy(() => import('../pages/Logs'))
 
 export const coreRoutes = [
   {
@@ -81,15 +86,42 @@ export const coreRoutes = [
     sidebar: true,
     order: 2.8,
   },
+  // --- Extensions group (expandable in sidebar) ---
   {
     id: 'extensions',
     path: '/extensions',
     label: 'Extensions',
     icon: Puzzle,
-    component: Extensions,
-    getProps: () => ({}),
+    component: null, // parent group — redirects to /extensions/services
     sidebar: true,
     order: 3,
+    group: 'extensions',
+    children: [
+      {
+        id: 'ext-services',
+        path: '/extensions/services',
+        label: 'Services',
+        icon: Container,
+        component: Services,
+        getProps: () => ({}),
+      },
+      {
+        id: 'ext-templates',
+        path: '/extensions/templates',
+        label: 'Templates',
+        icon: LayoutTemplate,
+        component: Extensions,
+        getProps: () => ({}),
+      },
+      {
+        id: 'ext-logs',
+        path: '/extensions/logs',
+        label: 'Logs',
+        icon: ScrollText,
+        component: Logs,
+        getProps: () => ({}),
+      },
+    ],
   },
   {
     id: 'settings',

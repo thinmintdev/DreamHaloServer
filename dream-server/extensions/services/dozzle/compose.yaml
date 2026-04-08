@@ -1,0 +1,22 @@
+services:
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dream-dozzle
+    restart: unless-stopped
+    environment:
+      - DOZZLE_NO_ANALYTICS=true
+    ports:
+      - "0.0.0.0:${DOZZLE_PORT:-9999}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthcheck || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, Suspense, useMemo, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import SetupWizard from './components/SetupWizard'
@@ -93,6 +93,7 @@ function App() {
           </div>
         }>
           <Routes>
+            <Route path="/extensions" element={<Navigate to="/extensions/services" replace />} />
             {routes.map(route => {
               const Component = route.component
               const props = typeof route.getProps === 'function' ? route.getProps({ status, loading }) : {}
