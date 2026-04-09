@@ -8,9 +8,13 @@ LABEL org.opencontainers.image.description="Dream Server Dashboard API"
 
 WORKDIR /app
 
-# Install system deps for GPU metrics access
+# Install system deps for GPU metrics access + Docker CLI for container exec
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    curl ca-certificates gnupg \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -21,8 +25,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py config.py models.py security.py gpu.py helpers.py agent_monitor.py ./
 COPY routers/ routers/
 
-# Non-root user
-RUN useradd -m -u 1000 dreamer
+# Non-root user with docker group access for container exec
+RUN groupadd -g 991 docker || true \
+    && useradd -m -u 1000 -G docker dreamer
 
 # B1 fix: Create /data directory and make it writable for API key generation
 RUN mkdir -p /data && chown dreamer:dreamer /data

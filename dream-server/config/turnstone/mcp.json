@@ -5,13 +5,13 @@
       "args": []
     },
     "proxmox": {
-      "url": "http://proxmox-mcp:8811/mcp"
+      "url": "http://dream-mcp-proxmox:8811/mcp"
     },
     "qdrant": {
-      "url": "http://qdrant-mcp:8812/mcp"
+      "url": "http://dream-mcp-qdrant:8812/mcp"
     },
     "searxng": {
-      "url": "http://searxng-mcp:8813/mcp"
+      "url": "http://dream-mcp-searxng:8813/mcp"
     }
   }
 }

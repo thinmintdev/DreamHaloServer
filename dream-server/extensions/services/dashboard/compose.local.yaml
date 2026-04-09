@@ -1,5 +1,8 @@
 services:
   dashboard:
+    build:
+      args:
+        VITE_DREAM_DOMAIN: ${DREAM_DOMAIN:-}
     depends_on:
       dashboard-api:
         condition: service_healthy

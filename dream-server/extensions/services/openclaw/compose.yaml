@@ -1,6 +1,6 @@
 services:
   openclaw:
-    image: ghcr.io/openclaw/openclaw:2026.3.8
+    image: ghcr.io/openclaw/openclaw:2026.4.5
     container_name: dream-openclaw
     restart: unless-stopped
     user: root
@@ -11,7 +11,6 @@ services:
       - PLAYWRIGHT_CHROMIUM_SANDBOX=false
       - OPENCLAW_CONFIG=/config/openclaw-dreamhalo.json
       - OPENCLAW_DATA=/data
-      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_TOKEN:?Set OPENCLAW_TOKEN in .env}
       - OPENCLAW_GATEWAY_PASSWORD=${OPENCLAW_GATEWAY_PASSWORD:-dreamhalo}
       - LLM_MODEL=${LLM_MODEL:-qwen3:30b-a3b}
       - BOOTSTRAP_MODEL=${BOOTSTRAP_MODEL:-qwen3:8b-q4_K_M}

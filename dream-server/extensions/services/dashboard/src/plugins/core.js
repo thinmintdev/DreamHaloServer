@@ -11,6 +11,14 @@ import {
   Container,
   ScrollText,
   LayoutTemplate,
+  MessageSquare,
+  Bot,
+  Workflow,
+  Search,
+  Image,
+  Terminal,
+  Server,
+  Layers,
 } from 'lucide-react'
 
 const Dashboard = lazy(() => import('../pages/Dashboard'))
@@ -76,16 +84,6 @@ export const coreRoutes = [
     sidebar: true,
     order: 2.5,
   },
-  {
-    id: 'service-map',
-    path: '/service-map',
-    label: 'Service Map',
-    icon: Network,
-    component: ServiceMap,
-    getProps: () => ({}),
-    sidebar: true,
-    order: 2.8,
-  },
   // --- Extensions group (expandable in sidebar) ---
   {
     id: 'extensions',
@@ -103,6 +101,14 @@ export const coreRoutes = [
         label: 'Services',
         icon: Container,
         component: Services,
+        getProps: () => ({}),
+      },
+      {
+        id: 'ext-integrations',
+        path: '/extensions/integrations',
+        label: 'Integrations',
+        icon: Network,
+        component: ServiceMap,
         getProps: () => ({}),
       },
       {
@@ -135,4 +141,13 @@ export const coreRoutes = [
   },
 ]
 
-export const coreExternalLinks = []
+export const coreExternalLinks = [
+  { id: 'open-webui', label: 'Chat', port: 3000, icon: MessageSquare, healthNeedles: ['open-webui'] },
+  { id: 'openclaw', label: 'OpenClaw', port: 7860, icon: Bot, healthNeedles: ['openclaw'] },
+  { id: 'n8n', label: 'n8n Workflows', port: 5678, icon: Workflow, healthNeedles: ['n8n'] },
+  { id: 'perplexica', label: 'Perplexica', port: 3004, icon: Search, healthNeedles: ['perplexica'] },
+  { id: 'turnstone', label: 'Turnstone', port: 8080, icon: Layers, healthNeedles: ['turnstone'] },
+  { id: 'comfyui', label: 'ComfyUI', port: 8188, icon: Image, healthNeedles: ['comfyui'] },
+  { id: 'opencode', label: 'OpenCode', port: 3003, icon: Terminal, healthNeedles: ['opencode'] },
+  { id: 'proxmox', label: 'Proxmox', port: 8006, icon: Server, alwaysHealthy: true, ui_path: '/' },
+]

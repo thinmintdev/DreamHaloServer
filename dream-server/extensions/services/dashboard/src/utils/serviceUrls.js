@@ -8,24 +8,25 @@
 
 const DREAM_DOMAIN = import.meta.env.VITE_DREAM_DOMAIN || ''
 
-// Map service IDs / ports to clean subdomain names
+// Map service ports to clean subdomain names (must match Traefik dynamic config)
 const SUBDOMAIN_MAP = {
   3000: 'chat',
-  3001: 'dashboard',
+  3001: 'dream',
   3002: 'api',
-  4000: 'llm',
-  5678: 'workflows',
-  6333: 'vectors',
-  7860: 'agent',
-  8080: 'inference',
-  8085: 'shield',
-  8188: 'studio',
-  8888: 'search',
-  9000: 'stt',
-  8880: 'tts',
-  3004: 'perplexica',
-  3005: 'tokenspy',
   3003: 'code',
+  3004: 'search',
+  3005: 'tokenspy',
+  4000: 'llm',
+  5678: 'n8n',
+  6333: 'vectors',
+  7860: 'claw',
+  8080: 'stone',
+  8085: 'shield',
+  8188: 'comfy',
+  8880: 'tts',
+  8888: 'searxng',
+  9000: 'stt',
+  11434: 'lemonade',
 }
 
 /**

@@ -66,5 +66,8 @@ provider = "openai"
 skip_permissions = true
 web_search_backend = "ddg"
 
+[judge]
+enabled = false
+
 [mcp]
 config_path = "/config/mcp.json"

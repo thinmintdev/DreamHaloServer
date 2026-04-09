@@ -15,6 +15,10 @@ RUN npm ci
 # Copy source files
 COPY . .
 
+# Domain for SSL subdomain links (set at build time or override via compose build arg)
+ARG VITE_DREAM_DOMAIN=""
+ENV VITE_DREAM_DOMAIN=$VITE_DREAM_DOMAIN
+
 # Build the React app
 RUN npm run build
 

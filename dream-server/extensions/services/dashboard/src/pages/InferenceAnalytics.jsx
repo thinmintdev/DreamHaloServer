@@ -81,8 +81,10 @@ function shortModelName(id) {
   return name || id
 }
 
+const DEFAULT_COLORS = ['#818cf8', '#f472b6', '#34d399', '#fb923c']
+
 // ============================================================================
-// SVG Time-series chart (no external deps)
+// SVG Time-series chart — supports single line or multi-series
 // ============================================================================
 
 const TimeSeriesChart = memo(function TimeSeriesChart({
@@ -93,9 +95,19 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
   color,
   maxOverride,
   height = 160,
+  series, // optional: [{values, color, label}]
 }) {
-  const data = (values || []).filter(v => v != null)
-  if (data.length < 2) {
+  // Build series array from either multi-series prop or single values prop
+  const allSeries = useMemo(() => {
+    if (series && series.length > 0) {
+      return series.filter(s => s.values && s.values.length >= 2)
+    }
+    const data = (values || []).filter(v => v != null)
+    if (data.length < 2) return []
+    return [{ values: data, color: color || '#818cf8', label: '' }]
+  }, [series, values, color])
+
+  if (allSeries.length === 0) {
     return (
       <div className="bg-theme-card border border-theme-border rounded-xl p-4">
         <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">{label}</p>
@@ -106,23 +118,38 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
     )
   }
 
+  const isMulti = allSeries.length > 1
   const W = 400
   const H = height
   const padX = 4
   const padY = 8
-  const max = maxOverride != null ? maxOverride : Math.max(...data, 1) * 1.1
-  const latest = data[data.length - 1]
 
-  const pts = data.map((v, i) => {
-    const x = padX + (i / (data.length - 1)) * (W - padX * 2)
-    const y = H - padY - (v / max) * (H - padY * 2)
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
+  // Compute shared max across all series
+  const globalMax = maxOverride != null
+    ? maxOverride
+    : Math.max(...allSeries.flatMap(s => s.values), 1) * 1.1
 
-  // Area fill path
-  const firstX = padX
-  const lastX = padX + ((data.length - 1) / (data.length - 1)) * (W - padX * 2)
-  const areaPath = `M ${firstX},${H - padY} L ${pts.split(' ').map(p => p).join(' L ')} L ${lastX},${H - padY} Z`
+  // Latest aggregate value (sum for multi, single value otherwise)
+  const latestAggregate = isMulti
+    ? allSeries.reduce((sum, s) => sum + (s.values[s.values.length - 1] || 0), 0)
+    : allSeries[0].values[allSeries[0].values.length - 1]
+
+  // Build SVG paths for each series
+  const seriesPaths = allSeries.map((s, si) => {
+    const data = s.values
+    const pts = data.map((v, i) => {
+      const x = padX + (i / (data.length - 1)) * (W - padX * 2)
+      const y = H - padY - (v / globalMax) * (H - padY * 2)
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+
+    const firstX = padX
+    const lastX = padX + ((data.length - 1) / (data.length - 1)) * (W - padX * 2)
+    const areaPath = `M ${firstX},${H - padY} L ${pts.split(' ').map(p => p).join(' L ')} L ${lastX},${H - padY} Z`
+    const lastPt = pts.split(' ').pop().split(',')
+
+    return { pts, areaPath, lastPt, color: s.color, label: s.label, latest: data[data.length - 1], key: si }
+  })
 
   // Time range label
   const ts = timestamps || []
@@ -130,13 +157,16 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
     ? `${new Date(ts[0]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(ts[ts.length - 1]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
     : ''
 
+  // Area fill opacity: lower when multi-series to reduce clutter
+  const areaOpacity = isMulti ? 0.10 : 0.25
+
   return (
     <div className="bg-theme-card border border-theme-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide">{label}</p>
         <div className="flex items-center gap-2">
           <span className="text-sm font-mono font-bold text-theme-text">
-            {typeof latest === 'number' ? (Number.isInteger(latest) ? latest : latest.toFixed(1)) : '--'}
+            {typeof latestAggregate === 'number' ? (Number.isInteger(latestAggregate) ? latestAggregate : latestAggregate.toFixed(1)) : '--'}
             {unit ? <span className="text-theme-text-muted ml-0.5 text-xs font-normal">{unit}</span> : null}
           </span>
         </div>
@@ -148,10 +178,12 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
         style={{ height: `${height}px` }}
       >
         <defs>
-          <linearGradient id={`area-${label}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
+          {seriesPaths.map(s => (
+            <linearGradient key={`grad-${s.key}`} id={`area-${label}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity={areaOpacity} />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0.02" />
+            </linearGradient>
+          ))}
         </defs>
         {/* Grid lines */}
         {[0.25, 0.5, 0.75].map(ratio => {
@@ -161,16 +193,29 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
               stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
           )
         })}
-        {/* Area fill */}
-        <path d={areaPath} fill={`url(#area-${label})`} />
-        {/* Line */}
-        <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        {/* Latest value dot */}
-        {data.length > 0 && (() => {
-          const lastPt = pts.split(' ').pop().split(',')
-          return <circle cx={lastPt[0]} cy={lastPt[1]} r="3" fill={color} />
-        })()}
+        {/* Render each series */}
+        {seriesPaths.map(s => (
+          <g key={s.key}>
+            <path d={s.areaPath} fill={`url(#area-${label}-${s.key})`} />
+            <polyline points={s.pts} fill="none" stroke={s.color} strokeWidth={isMulti ? '1.5' : '2'} strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={s.lastPt[0]} cy={s.lastPt[1]} r={isMulti ? '2.5' : '3'} fill={s.color} />
+          </g>
+        ))}
       </svg>
+      {/* Legend for multi-series */}
+      {isMulti && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+          {seriesPaths.map(s => (
+            <div key={s.key} className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+              <span className="text-[10px] font-mono text-theme-text-muted">
+                {s.label}
+                <span className="ml-1 text-theme-text">{s.latest?.toFixed?.(1) ?? s.latest}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {timeRange && (
         <p className="text-[10px] text-theme-text-muted mt-1.5 font-mono text-center">{timeRange}</p>
       )}
@@ -195,6 +240,42 @@ const SummaryCard = memo(function SummaryCard({ icon: Icon, label, value, subval
       {subvalue && (
         <div className="text-[10px] text-theme-text-muted mt-0.5 truncate">{subvalue}</div>
       )}
+    </div>
+  )
+})
+
+// ============================================================================
+// Model activity status bar
+// ============================================================================
+
+const ModelActivityBar = memo(function ModelActivityBar({ perModel }) {
+  if (!perModel || Object.keys(perModel).length === 0) return null
+
+  const entries = Object.entries(perModel)
+  return (
+    <div className="mb-6 p-3 bg-theme-card border border-theme-border rounded-xl">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {entries.map(([name, data]) => {
+          const isActive = data.tps > 0 || data.active_requests > 0
+          return (
+            <div key={name} className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${isActive ? 'animate-pulse' : ''}`}
+                style={{ backgroundColor: data.color || '#818cf8' }}
+              />
+              <span className="text-xs font-mono text-theme-text">
+                {shortModelName(name)}
+              </span>
+              <span className="text-xs font-mono text-theme-text-muted">
+                {data.tps > 0 ? `${data.tps} t/s` : 'idle'}
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-theme-bg text-theme-text-muted">
+                {data.type || 'llm'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 })
@@ -260,35 +341,44 @@ const MetricsTable = memo(function MetricsTable({ allMetrics }) {
 const ModelInfoPanel = memo(function ModelInfoPanel({ summary, metrics }) {
   const models = summary?.loaded_models || []
   const ctx = summary?.context_size || metrics?.n_ctx_total || null
+  const perModel = metrics?.per_model || {}
 
   return (
     <div className="bg-theme-card border border-theme-border rounded-xl p-4">
       <p className="text-xs font-semibold text-theme-text-muted uppercase tracking-wide mb-3">Model Info</p>
       {models.length > 0 ? (
         <div className="space-y-2">
-          {models.map(model => (
-            <div
-              key={model.id || model.raw_id}
-              className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 ${
-                model.active
-                  ? 'bg-emerald-500/10 border border-emerald-500/20'
-                  : 'bg-theme-bg border border-theme-border/50'
-              }`}
-            >
-              <span className={`h-2 w-2 rounded-full shrink-0 ${model.active ? 'bg-emerald-400' : 'bg-theme-text-muted/30'}`} />
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-medium text-theme-text truncate block" title={model.id}>
-                  {shortModelName(model.id)}
-                </span>
-                {model.size_gb && (
-                  <span className="text-[10px] text-theme-text-muted">{model.size_gb} GB</span>
+          {models.map(model => {
+            const pm = perModel[model.id] || perModel[model.raw_id] || {}
+            return (
+              <div
+                key={model.id || model.raw_id}
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 ${
+                  model.active
+                    ? 'bg-emerald-500/10 border border-emerald-500/20'
+                    : 'bg-theme-bg border border-theme-border/50'
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full shrink-0 ${pm.tps > 0 ? 'animate-pulse' : ''}`}
+                  style={{ backgroundColor: pm.color || (model.active ? '#34d399' : 'rgba(255,255,255,0.2)') }}
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-medium text-theme-text truncate block" title={model.id}>
+                    {shortModelName(model.id)}
+                  </span>
+                  <span className="text-[10px] text-theme-text-muted">
+                    {model.size_gb ? `${model.size_gb} GB` : ''}
+                    {pm.tps > 0 ? ` · ${pm.tps} t/s` : ''}
+                    {pm.type ? ` · ${pm.type}` : ''}
+                  </span>
+                </div>
+                {pm.tps > 0 && (
+                  <span className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">active</span>
                 )}
               </div>
-              {model.active && (
-                <span className="text-[8px] font-semibold uppercase tracking-wide text-emerald-400">active</span>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <p className="text-xs text-theme-text-muted">No models loaded</p>
@@ -304,6 +394,22 @@ const ModelInfoPanel = memo(function ModelInfoPanel({ summary, metrics }) {
     </div>
   )
 })
+
+// ============================================================================
+// Build multi-series data from history.per_model
+// ============================================================================
+
+function buildSeries(perModel, metric) {
+  if (!perModel || Object.keys(perModel).length === 0) return null
+  const entries = Object.entries(perModel)
+  if (entries.length < 1) return null
+
+  return entries.map(([name, data]) => ({
+    values: data[metric] || [],
+    color: data.color || '#818cf8',
+    label: shortModelName(name),
+  })).filter(s => s.values.length >= 2)
+}
 
 // ============================================================================
 // Main page
@@ -350,9 +456,21 @@ export default function InferenceAnalytics() {
   const activeModel = summary?.active_model || null
   const ctxSize = summary?.context_size || metrics?.n_ctx_total || null
   const uptime = summary?.uptime || 0
+  const perModel = metrics?.per_model || {}
 
   // Spec decode stats
   const draftAcceptance = metrics?.draft_acceptance_pct
+
+  // Per-model TPS subvalue for summary card
+  const perModelTpsSub = Object.entries(perModel)
+    .filter(([, m]) => m.tps > 0)
+    .map(([name, m]) => `${shortModelName(name)}: ${m.tps}`)
+    .join(' | ') || 'generation speed'
+
+  // Build multi-series for charts
+  const tpsSeries = buildSeries(history?.per_model, 'tps')
+  const kvSeries = buildSeries(history?.per_model, 'kv_cache_usage')
+  const reqSeries = buildSeries(history?.per_model, 'active_requests')
 
   return (
     <div className="p-8">
@@ -364,7 +482,7 @@ export default function InferenceAnalytics() {
             Inference Analytics
           </h1>
           <p className="mt-1 text-sm text-theme-text-muted">
-            Deep inference metrics and performance history
+            Per-model inference metrics and performance history
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono bg-theme-card border border-theme-border rounded-lg px-3 py-2 text-theme-text-muted">
@@ -373,13 +491,16 @@ export default function InferenceAnalytics() {
         </div>
       </div>
 
+      {/* Model activity status bar */}
+      <ModelActivityBar perModel={perModel} />
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
         <SummaryCard
           icon={Zap}
           label="Tokens/sec"
           value={tps || '--'}
-          subvalue="generation speed"
+          subvalue={perModelTpsSub}
         />
         <SummaryCard
           icon={Zap}
@@ -395,9 +516,9 @@ export default function InferenceAnalytics() {
         />
         <SummaryCard
           icon={Brain}
-          label="Active Model"
-          value={activeModel ? shortModelName(activeModel) : '--'}
-          subvalue={ctxSize ? `${(ctxSize / 1024).toFixed(0)}k context` : ''}
+          label="Models Loaded"
+          value={Object.keys(perModel).length || (activeModel ? 1 : 0)}
+          subvalue={activeModel ? shortModelName(activeModel) : ''}
         />
         <SummaryCard
           icon={Layers}
@@ -432,7 +553,7 @@ export default function InferenceAnalytics() {
         </div>
       )}
 
-      {/* Time-series charts */}
+      {/* Time-series charts — multi-line when per-model data available */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
         <TimeSeriesChart
           timestamps={history?.timestamps}
@@ -440,6 +561,7 @@ export default function InferenceAnalytics() {
           label="Tokens / sec"
           unit="t/s"
           color="#818cf8"
+          series={tpsSeries}
         />
         <TimeSeriesChart
           timestamps={history?.timestamps}
@@ -448,6 +570,7 @@ export default function InferenceAnalytics() {
           unit="%"
           color="#34d399"
           maxOverride={100}
+          series={kvSeries}
         />
         <TimeSeriesChart
           timestamps={history?.timestamps}
@@ -455,6 +578,7 @@ export default function InferenceAnalytics() {
           label="Active Requests"
           unit=""
           color="#fb923c"
+          series={reqSeries}
         />
       </div>
 
